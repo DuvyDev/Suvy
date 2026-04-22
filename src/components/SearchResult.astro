@@ -1,0 +1,49 @@
+---
+import type { SearchResult } from '../lib/search';
+
+export interface Props {
+  result: SearchResult;
+}
+
+const { result } = Astro.props;
+
+// Helper to format URL for display
+const displayUrl = (() => {
+  try {
+    const urlObj = new URL(result.url);
+    return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname !== '/' ? urlObj.pathname : ''}`;
+  } catch(e) {
+    return result.url;
+  }
+})();
+
+const isLocal = result.source === 'local';
+---
+
+<div class="mb-6 max-w-[700px] w-full">
+  <div class="group flex flex-col p-4 rounded-2xl bg-[var(--card-bg)] backdrop-blur-sm border border-transparent hover:border-[var(--search-border)] hover:bg-[var(--card-hover)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer" onclick={`window.open('${result.url}', '_blank')`}>
+    <a href={result.url} target="_blank" rel="noopener noreferrer" class="block mb-2" onclick="event.stopPropagation();">
+      <div class="flex items-center space-x-3 mb-2">
+        <div class="w-7 h-7 rounded-full bg-[var(--button-bg)] flex items-center justify-center shadow-sm">
+          <img src={`https://www.google.com/s2/favicons?domain=${new URL(result.url).hostname}&sz=32`} alt="favicon" class="w-4 h-4 rounded-sm object-contain" onerror="this.style.display='none'" />
+        </div>
+        <div class="flex flex-col">
+          <span class="text-xs text-[var(--text-muted)] truncate max-w-[250px] sm:max-w-[400px] font-medium">{displayUrl}</span>
+        </div>
+        <!-- Source badge -->
+        <span class:list={[
+          'ml-auto shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border',
+          isLocal
+            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+            : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+        ]}>
+          {isLocal ? '🏠 Local' : '🦆 DDG'}
+        </span>
+      </div>
+      <h3 class="text-[22px] text-[var(--link-color)] group-hover:underline visited:text-[var(--link-visited)] font-semibold leading-tight line-clamp-2">
+        {result.title}
+      </h3>
+    </a>
+    <p class="text-[15px] text-[var(--text-color)] leading-relaxed line-clamp-3 opacity-90 font-light" set:html={result.content}></p>
+  </div>
+</div>

@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-color: #f8fafc; /* Slate 50 */
+    --bg-gradient: radial-gradient(circle at 15% 50%, rgba(224, 242, 254, 0.4), transparent 50%),
+                   radial-gradient(circle at 85% 30%, rgba(254, 226, 226, 0.4), transparent 50%);
+    --text-color: #0f172a; /* Slate 900 */
+    --text-muted: #64748b; /* Slate 500 */
+    --link-color: #2563eb; /* Blue 600 */
+    --link-visited: #7c3aed; /* Violet 600 */
+    
+    /* Glassmorphism Search */
+    --search-bg: rgba(255, 255, 255, 0.7);
+    --search-border: rgba(255, 255, 255, 0.4);
+    --search-ring: rgba(56, 189, 248, 0.5);
+    --search-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+    
+    /* Buttons */
+    --button-bg: rgba(255, 255, 255, 0.8);
+    --button-border: rgba(226, 232, 240, 0.8);
+    --button-hover: rgba(255, 255, 255, 1);
+    --button-text: #334155;
+    
+    /* Result Card */
+    --card-bg: rgba(255, 255, 255, 0.6);
+    --card-hover: rgba(255, 255, 255, 0.9);
+    
+    /* Footer */
+    --footer-bg: rgba(248, 250, 252, 0.8);
+    --footer-text: #64748b;
+  }
+
+  .dark {
+    --bg-color: #202124; /* Google Dark Grey */
+    --text-color: #e8eaed; 
+    --text-muted: #bdc1c6; 
+    --link-color: #8ab4f8; 
+    --link-visited: #c58af9; 
+    
+    /* Glassmorphism Search */
+    --search-bg: rgba(32, 33, 36, 0.6);
+    --search-border: rgba(95, 99, 104, 0.5);
+    --search-ring: rgba(138, 180, 248, 0.4);
+    --search-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    
+    /* Buttons */
+    --button-bg: rgba(48, 49, 52, 0.6);
+    --button-border: rgba(95, 99, 104, 0.5);
+    --button-hover: rgba(60, 64, 67, 1);
+    --button-text: #e8eaed;
+    
+    /* Result Card */
+    --card-bg: rgba(48, 49, 52, 0.4);
+    --card-hover: rgba(60, 64, 67, 0.7);
+    
+    /* Footer */
+    --footer-bg: rgba(23, 23, 23, 0.8);
+    --footer-text: #9aa0a6;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+}

@@ -1,0 +1,21 @@
+---
+const langCookie = Astro.cookies.get('lang')?.value;
+const currentLang = langCookie === 'en' ? 'en' : 'es';
+const targetLang = currentLang === 'es' ? 'en' : 'es';
+const label = currentLang === 'es' ? 'English' : 'Español';
+---
+
+<button id="lang-toggle" data-lang={targetLang} class="text-[var(--link-color)] hover:underline text-sm ml-2 cursor-pointer">
+  {label}
+</button>
+
+<script>
+  const button = document.getElementById('lang-toggle');
+  button?.addEventListener('click', () => {
+    const targetLang = button.getAttribute('data-lang');
+    // Set cookie for Astro SSR
+    document.cookie = `lang=${targetLang}; path=/; max-age=31536000`;
+    // Reload page to apply changes
+    window.location.reload();
+  });
+</script>

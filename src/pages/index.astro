@@ -1,0 +1,78 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SearchBar from '../components/SearchBar.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import LanguageToggle from '../components/LanguageToggle.astro';
+import { getTranslation } from '../i18n/translations';
+
+const langCookie = Astro.cookies.get('lang')?.value;
+const t = getTranslation(langCookie);
+---
+
+<Layout title="Search">
+  <main class="flex-1 flex flex-col justify-center items-center px-4 w-full h-[calc(100vh-80px)]">
+    
+    <!-- Logo -->
+    <div class="mb-10 animate-fade-in-up">
+      <h1 class="text-7xl sm:text-9xl font-extrabold tracking-tighter text-center pb-4" style="background: -webkit-linear-gradient(45deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Search
+      </h1>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="w-full px-4 animate-fade-in-up" style="animation-delay: 0.1s;">
+      <SearchBar autoFocus={true} />
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex flex-wrap justify-center gap-4 mt-10 animate-fade-in-up" style="animation-delay: 0.2s;">
+      <button class="bg-[var(--button-bg)] hover:bg-[var(--button-hover)] border border-transparent shadow-sm hover:shadow-md text-[var(--button-text)] px-6 py-2.5 rounded-full font-medium text-sm transition-all duration-300 cursor-pointer transform hover:-translate-y-0.5" onclick="document.querySelector('form').submit()">
+        {t.searchButton}
+      </button>
+      <button class="bg-[var(--button-bg)] hover:bg-[var(--button-hover)] border border-transparent shadow-sm hover:shadow-md text-[var(--button-text)] px-6 py-2.5 rounded-full font-medium text-sm transition-all duration-300 cursor-pointer transform hover:-translate-y-0.5" onclick="document.querySelector('form').submit()">
+        {t.feelingLucky}
+      </button>
+    </div>
+
+    <!-- Language Info -->
+    <div class="mt-12 text-sm text-[var(--text-muted)] animate-fade-in-up" style="animation-delay: 0.3s;">
+      Ofrecido por Search en: 
+      <span class="font-medium">
+        <LanguageToggle />
+      </span>
+    </div>
+
+  </main>
+
+  <footer class="bg-[var(--footer-bg)] text-[var(--footer-text)] backdrop-blur-md border-t border-[var(--button-border)] flex flex-col transition-colors duration-300">
+    <div class="flex flex-col sm:flex-row justify-between items-center px-8 py-4 text-sm font-medium flex-wrap gap-4">
+      <div class="flex space-x-6">
+        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.about}</a>
+        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.privacy}</a>
+        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.terms}</a>
+      </div>
+      <div class="flex space-x-6 items-center">
+        <div class="hover:text-[var(--link-color)] transition-colors">
+          <ThemeToggle />
+        </div>
+        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.settings}</a>
+      </div>
+    </div>
+  </footer>
+</Layout>
+
+<style>
+  .animate-fade-in-up {
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+</style>

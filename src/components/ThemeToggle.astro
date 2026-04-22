@@ -1,0 +1,25 @@
+---
+import { getTranslation } from '../i18n/translations';
+
+const langCookie = Astro.cookies.get('lang')?.value;
+const t = getTranslation(langCookie);
+---
+
+<button id="theme-toggle" class="hover:underline cursor-pointer text-sm" aria-label="Toggle Theme">
+  <span class="dark:hidden">{t.dark}</span>
+  <span class="hidden dark:inline">{t.light}</span>
+</button>
+
+<script>
+  const button = document.getElementById('theme-toggle');
+  button?.addEventListener('click', () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    }
+  });
+</script>

@@ -1,0 +1,234 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SearchBar from '../components/SearchBar.astro';
+import SearchResult from '../components/SearchResult.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import LanguageToggle from '../components/LanguageToggle.astro';
+import { search } from '../lib/search';
+import { getTranslation } from '../i18n/translations';
+
+const q = Astro.url.searchParams.get('q') || '';
+const pageParam = parseInt(Astro.url.searchParams.get('page') || '1', 10);
+const currentPage = pageParam >= 1 ? pageParam : 1;
+const langCookie = Astro.cookies.get('lang')?.value;
+const t = getTranslation(langCookie);
+
+// Perform search on the server if query exists
+let results: Awaited<ReturnType<typeof search>> = {
+  results: [], localCount: 0, ddgCount: 0, page: currentPage, totalLocal: 0, hasMore: false
+};
+
+if (q) {
+  results = await search(q, currentPage);
+}
+
+const { results: items, localCount, ddgCount, hasMore, totalLocal } = results;
+const totalPages = Math.max(1, Math.ceil(totalLocal / 10));
+
+// Build pagination range (show up to 7 pages centered around current)
+function getPaginationRange(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  
+  const range: (number | '...')[] = [];
+  if (current <= 4) {
+    for (let i = 1; i <= 5; i++) range.push(i);
+    range.push('...');
+    range.push(total);
+  } else if (current >= total - 3) {
+    range.push(1);
+    range.push('...');
+    for (let i = total - 4; i <= total; i++) range.push(i);
+  } else {
+    range.push(1);
+    range.push('...');
+    for (let i = current - 1; i <= current + 1; i++) range.push(i);
+    range.push('...');
+    range.push(total);
+  }
+  return range;
+}
+
+const paginationRange = getPaginationRange(currentPage, totalPages);
+---
+
+<Layout title={`${q} - Search`}>
+  <!-- Header -->
+  <header class="flex items-center w-full px-4 sm:px-8 py-5 border-b border-[var(--button-border)] sticky top-0 bg-[var(--bg-color)]/80 backdrop-blur-xl z-20 shadow-sm transition-colors duration-300">
+    <a href="/" class="mr-6 sm:mr-10 shrink-0 transform hover:scale-105 transition-transform">
+      <h1 class="text-4xl font-extrabold tracking-tighter pb-1" style="background: -webkit-linear-gradient(45deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Search
+      </h1>
+    </a>
+    <div class="flex-1 w-full max-w-[700px]">
+      <SearchBar initialValue={q} />
+    </div>
+    <div class="ml-auto hidden sm:flex items-center space-x-6 font-medium text-sm text-[var(--text-muted)]">
+      <div class="hover:text-[var(--link-color)] transition-colors">
+        <ThemeToggle />
+      </div>
+      <div class="hover:text-[var(--link-color)] transition-colors">
+        <LanguageToggle />
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 px-4 sm:px-8 lg:px-[180px] py-8 w-full max-w-7xl animate-fade-in">
+    
+    {q ? (
+      <div class="text-sm text-[var(--text-muted)] mb-8 font-medium flex flex-wrap items-center gap-3">
+        <span>
+          {t.resultsFor} <span class="font-bold text-[var(--text-color)] bg-[var(--button-border)] px-2 py-1 rounded-md">{q}</span>
+        </span>
+        {localCount > 0 && (
+          <span class="text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
+            🏠 {localCount} local
+          </span>
+        )}
+        {ddgCount > 0 && (
+          <span class="text-[11px] bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded-full font-semibold">
+            🦆 {ddgCount} DuckDuckGo
+          </span>
+        )}
+        {totalLocal > 0 && (
+          <span class="text-[11px] text-[var(--text-muted)] opacity-70">
+            ({totalLocal} total en índice)
+          </span>
+        )}
+      </div>
+    ) : null}
+
+    {q && items.length === 0 ? (
+      <div class="mt-12 p-8 rounded-2xl bg-[var(--card-bg)] backdrop-blur-md border border-[var(--button-border)]">
+        <p class="text-xl text-[var(--text-color)] font-medium mb-4">{t.noResults} <strong>{q}</strong>.</p>
+        <p class="text-[var(--text-muted)] mb-2">Sugerencias:</p>
+        <ul class="list-disc pl-6 space-y-2 text-[var(--text-color)] opacity-90">
+          <li>Asegúrate de que todas las palabras estén escritas correctamente.</li>
+          <li>Prueba diferentes palabras clave.</li>
+          <li>Prueba palabras clave más generales.</li>
+        </ul>
+      </div>
+    ) : (
+      <div class="flex flex-col gap-2">
+        {items.map((result, i) => (
+          <div class="animate-fade-in-up" style={`animation-delay: ${i * 0.05}s;`}>
+            <SearchResult result={result} />
+          </div>
+        ))}
+      </div>
+    )}
+
+    <!-- Pagination -->
+    {q && items.length > 0 && totalPages > 1 && (
+      <nav class="flex justify-center items-center gap-2 mt-12 mb-8 animate-fade-in" aria-label="Pagination">
+        {/* Previous button */}
+        {currentPage > 1 ? (
+          <a
+            href={`/search?q=${encodeURIComponent(q)}&page=${currentPage - 1}`}
+            class="pagination-btn"
+            aria-label="Previous page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </a>
+        ) : (
+          <span class="pagination-btn opacity-30 pointer-events-none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </span>
+        )}
+
+        {/* Page numbers */}
+        {paginationRange.map((p) => (
+          p === '...' ? (
+            <span class="px-2 text-[var(--text-muted)] select-none">…</span>
+          ) : p === currentPage ? (
+            <span class="pagination-btn pagination-active">{p}</span>
+          ) : (
+            <a
+              href={`/search?q=${encodeURIComponent(q)}&page=${p}`}
+              class="pagination-btn"
+            >
+              {p}
+            </a>
+          )
+        ))}
+
+        {/* Next button */}
+        {hasMore ? (
+          <a
+            href={`/search?q=${encodeURIComponent(q)}&page=${currentPage + 1}`}
+            class="pagination-btn"
+            aria-label="Next page"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        ) : (
+          <span class="pagination-btn opacity-30 pointer-events-none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </span>
+        )}
+      </nav>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out both;
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(15px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-color);
+    background: var(--card-bg);
+    border: 1px solid var(--button-border);
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .pagination-btn:hover:not(.pagination-active):not(.pointer-events-none) {
+    background: var(--button-hover);
+    border-color: var(--search-border);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  .pagination-active {
+    background: linear-gradient(135deg, #4285F4, #34A853);
+    color: white;
+    border-color: transparent;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+    pointer-events: none;
+  }
+</style>
