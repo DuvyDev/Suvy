@@ -3,32 +3,296 @@ import { getTranslation } from '../i18n/translations';
 
 export interface Props {
   initialValue?: string;
+  query?: string;
   autoFocus?: boolean;
+  action?: string;
+  compact?: boolean;
 }
 
-const { initialValue = '', autoFocus = false } = Astro.props;
+const { initialValue = '', query, autoFocus = false, action = '/search', compact = false } = Astro.props;
+const value = query ?? initialValue;
 const langCookie = Astro.cookies.get('lang')?.value;
 const t = getTranslation(langCookie);
 ---
 
-<form action="/search" method="get" class="w-full max-w-[650px] mx-auto group">
-  <div class="relative flex items-center w-full h-14 rounded-full border border-[var(--search-border)] bg-[var(--search-bg)] backdrop-blur-md shadow-[var(--search-shadow)] hover:shadow-lg focus-within:shadow-xl focus-within:ring-2 focus-within:ring-[var(--search-ring)] transition-all duration-300 px-5 mt-6">
-    <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-6 h-6 text-[var(--text-muted)] mr-3 group-focus-within:text-[var(--link-color)] transition-colors duration-300">
+<form action={action} method="get" class="w-full max-w-[650px] mx-auto group" id="search-form">
+  <div class:list={['search-container', { compact }]}>
+    <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="search-icon">
       <path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
     </svg>
     <input 
       type="text" 
       name="q" 
-      value={initialValue}
+      id="search-input"
+      value={value}
       placeholder={t.searchPlaceholder}
-      class="flex-1 bg-transparent outline-none text-[17px] text-[var(--text-color)] placeholder:text-[var(--text-muted)] w-full"
+      class="search-input"
       autocomplete="off"
       autofocus={autoFocus}
     />
-    <button type="submit" aria-label="Search" class="p-2 rounded-full hover:bg-[var(--button-border)] transition-colors">
+    <button type="submit" aria-label="Search" class="search-btn">
       <svg class="w-6 h-6 text-[var(--link-color)]" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
          <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
       </svg>
     </button>
+
+    <!-- Autocomplete dropdown -->
+    <div id="suggest-dropdown" class="suggest-dropdown" style="display: none;">
+      <!-- Items injected by JS -->
+    </div>
   </div>
 </form>
+
+<style>
+  .search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 3.5rem;
+    border-radius: 9999px;
+    border: 1px solid var(--search-border);
+    background: var(--search-bg);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--search-shadow);
+    padding: 0 1.25rem;
+    margin-top: 1.5rem;
+    transition: all 0.3s ease;
+  }
+
+  .search-container:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  .search-container:focus-within {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    ring: 2px;
+    border-color: var(--search-ring);
+  }
+
+  .search-container.has-suggestions {
+    border-radius: 1.5rem 1.5rem 0 0;
+  }
+
+  .search-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--text-muted);
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+    transition: color 0.3s;
+  }
+
+  .search-container:focus-within .search-icon {
+    color: var(--link-color);
+  }
+
+  .search-input {
+    flex: 1;
+    background: transparent;
+    outline: none;
+    font-size: 1.06rem;
+    color: var(--text-color);
+    width: 100%;
+  }
+
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  .search-btn {
+    padding: 0.5rem;
+    border-radius: 9999px;
+    transition: background 0.2s;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+
+  .search-btn:hover {
+    background: var(--button-border);
+  }
+
+</style>
+
+<style is:global>
+  /* Autocomplete dropdown — must be global because items are injected by client JS */
+  .suggest-dropdown {
+    position: absolute;
+    top: 100%;
+    left: -1px;
+    right: -1px;
+    background: var(--search-bg, var(--bg-color));
+    border: 1px solid var(--search-border);
+    border-top: 1px solid var(--button-border, rgba(128,128,128,0.2));
+    border-radius: 0 0 1.25rem 1.25rem;
+    overflow: hidden;
+    z-index: 200;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+  }
+
+  .suggest-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 1.25rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .suggest-item:hover,
+  .suggest-item.active {
+    background: var(--button-border, rgba(99, 102, 241, 0.1));
+  }
+
+  .suggest-item:last-child {
+    border-radius: 0 0 1.25rem 1.25rem;
+  }
+
+  .suggest-icon {
+    width: 1rem;
+    height: 1rem;
+    color: var(--text-muted);
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .suggest-text {
+    font-size: 0.92rem;
+    color: var(--text-color);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .suggest-text mark {
+    background: none;
+    color: var(--link-color);
+    font-weight: 600;
+  }
+</style>
+
+<script is:inline>
+(function() {
+  const input = document.getElementById('search-input');
+  const dropdown = document.getElementById('suggest-dropdown');
+  const form = document.getElementById('search-form');
+  if (!input || !dropdown || !form) return;
+
+  let debounceTimer = null;
+  let activeIndex = -1;
+  let suggestions = [];
+  let currentQuery = '';
+
+  function highlightMatch(text, query) {
+    if (!query) return text;
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return text.replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>');
+  }
+
+  function renderDropdown() {
+    if (suggestions.length === 0) {
+      dropdown.style.display = 'none';
+      input.closest('.search-container').classList.remove('has-suggestions');
+      return;
+    }
+
+    dropdown.innerHTML = suggestions.map(function(s, i) {
+      return '<div class="suggest-item' + (i === activeIndex ? ' active' : '') + '" data-index="' + i + '">' +
+        '<svg class="suggest-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>' +
+        '<span class="suggest-text">' + highlightMatch(s, currentQuery) + '</span>' +
+        '</div>';
+    }).join('');
+
+    dropdown.style.display = 'block';
+    input.closest('.search-container').classList.add('has-suggestions');
+
+    // Click handler for each item
+    dropdown.querySelectorAll('.suggest-item').forEach(function(item) {
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        var idx = parseInt(item.getAttribute('data-index'));
+        input.value = suggestions[idx];
+        hideDropdown();
+        form.submit();
+      });
+    });
+  }
+
+  function hideDropdown() {
+    dropdown.style.display = 'none';
+    input.closest('.search-container').classList.remove('has-suggestions');
+    suggestions = [];
+    activeIndex = -1;
+  }
+
+  async function fetchSuggestions(query) {
+    if (query.length < 3) {
+      hideDropdown();
+      return;
+    }
+
+    try {
+      var res = await fetch('/api/suggest?q=' + encodeURIComponent(query));
+      if (!res.ok) return;
+      var data = await res.json();
+      // OpenSearch format: [query, [titles], [descriptions], [urls]]
+      if (Array.isArray(data) && data.length >= 2) {
+        currentQuery = query;
+        suggestions = data[1] || [];
+        activeIndex = -1;
+        renderDropdown();
+      }
+    } catch (e) {
+      // Silently ignore
+    }
+  }
+
+  input.addEventListener('input', function() {
+    clearTimeout(debounceTimer);
+    var q = input.value.trim();
+    if (q.length < 3) {
+      hideDropdown();
+      return;
+    }
+    debounceTimer = setTimeout(function() {
+      fetchSuggestions(q);
+    }, 250);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    if (suggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIndex = (activeIndex + 1) % suggestions.length;
+      renderDropdown();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = activeIndex <= 0 ? suggestions.length - 1 : activeIndex - 1;
+      renderDropdown();
+    } else if (e.key === 'Enter' && activeIndex >= 0) {
+      e.preventDefault();
+      input.value = suggestions[activeIndex];
+      hideDropdown();
+      form.submit();
+    } else if (e.key === 'Escape') {
+      hideDropdown();
+    }
+  });
+
+  input.addEventListener('blur', function() {
+    // Delay to allow click on suggestion
+    setTimeout(hideDropdown, 200);
+  });
+
+  input.addEventListener('focus', function() {
+    if (input.value.trim().length >= 3 && suggestions.length > 0) {
+      renderDropdown();
+    }
+  });
+})();
+</script>

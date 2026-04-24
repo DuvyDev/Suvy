@@ -17,8 +17,32 @@ interface CrawlerSearchResult {
   description: string;
   snippet: string;
   domain: string;
+  language: string;
+  region: string;
   crawled_at: string;
   rank: number;
+}
+
+/** Raw image search result from the Duvycrawl API. */
+interface CrawlerImageResult {
+  id: number;
+  url: string;
+  page_url: string;
+  domain: string;
+  alt_text: string;
+  title: string;
+  context: string;
+  width: number;
+  height: number;
+  rank: number;
+}
+
+interface CrawlerImageResponse {
+  query: string;
+  total: number;
+  page: number;
+  limit: number;
+  results: CrawlerImageResult[];
 }
 
 interface CrawlerSearchResponse {
@@ -43,7 +67,7 @@ export async function searchCrawler(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CRAWLER_TIMEOUT_MS);
 
-    const url = `${CRAWLER_API}/search?q=${encodeURIComponent(query)}&limit=${limit}`;
+    const url = `${CRAWLER_API}/search?q=${encodeURIComponent(query)}&limit=${limit}&lang=es`;
     const response = await fetch(url, { signal: controller.signal });
 
     clearTimeout(timeoutId);
@@ -74,8 +98,9 @@ export async function searchCrawler(
 /**
  * Ask the crawler to index a list of URLs.
  * Fire-and-forget — errors are logged but not propagated.
+ * @param force If true, forces re-indexing even if recently crawled.
  */
-export async function requestCrawl(urls: string[]): Promise<void> {
+export async function requestCrawl(urls: string[], force: boolean = false): Promise<void> {
   if (urls.length === 0) return;
 
   try {
@@ -85,12 +110,12 @@ export async function requestCrawl(urls: string[]): Promise<void> {
     await fetch(`${CRAWLER_API}/crawl`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ urls }),
+      body: JSON.stringify({ urls, force }),
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
-    console.log(`[duvycrawl] Requested crawl for ${urls.length} URL(s)`);
+    console.log(`[duvycrawl] Requested crawl for ${urls.length} URL(s) (force=${force})`);
   } catch {
     // Silently ignore — the crawler might not be running.
   }
@@ -111,7 +136,7 @@ export async function searchCrawlerFull(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CRAWLER_TIMEOUT_MS);
 
-    const url = `${CRAWLER_API}/search?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}`;
+    const url = `${CRAWLER_API}/search?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}&lang=es`;
     const response = await fetch(url, { signal: controller.signal });
 
     clearTimeout(timeoutId);
@@ -140,3 +165,54 @@ export async function searchCrawlerFull(
   }
 }
 
+/** Image search result exposed to the frontend. */
+export interface ImageResult {
+  url: string;
+  pageUrl: string;
+  domain: string;
+  alt: string;
+  title: string;
+  context: string;
+  width: number;
+  height: number;
+}
+
+/**
+ * Search for images in the Duvycrawl image index.
+ */
+export async function searchCrawlerImages(
+  query: string,
+  limit: number = 20,
+  page: number = 1
+): Promise<{ results: ImageResult[]; total: number }> {
+  if (!query || query.trim() === '') return { results: [], total: 0 };
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), CRAWLER_TIMEOUT_MS);
+
+    const url = `${CRAWLER_API}/images/search?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}`;
+    const response = await fetch(url, { signal: controller.signal });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) return { results: [], total: 0 };
+
+    const data: CrawlerImageResponse = await response.json();
+
+    const results = (data.results || []).map((r) => ({
+      url: r.url,
+      pageUrl: r.page_url,
+      domain: r.domain,
+      alt: r.alt_text || r.title || '',
+      title: r.title || r.alt_text || '',
+      context: r.context || '',
+      width: r.width,
+      height: r.height,
+    }));
+
+    return { results, total: data.total || 0 };
+  } catch {
+    return { results: [], total: 0 };
+  }
+}

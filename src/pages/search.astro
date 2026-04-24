@@ -22,7 +22,7 @@ if (q) {
   results = await search(q, currentPage);
 }
 
-const { results: items, localCount, ddgCount, hasMore, totalLocal } = results;
+const { results: items, localCount, hasMore, totalLocal } = results;
 const totalPages = Math.max(1, Math.ceil(totalLocal / 10));
 
 // Build pagination range (show up to 7 pages centered around current)
@@ -54,11 +54,15 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
 <Layout title={`${q} - Search`}>
   <!-- Header -->
   <header class="flex items-center w-full px-4 sm:px-8 py-5 border-b border-[var(--button-border)] sticky top-0 bg-[var(--bg-color)]/80 backdrop-blur-xl z-20 shadow-sm transition-colors duration-300">
-    <a href="/" class="mr-6 sm:mr-10 shrink-0 transform hover:scale-105 transition-transform">
+    <a href="/" class="mr-3 sm:mr-5 shrink-0 transform hover:scale-105 transition-transform">
       <h1 class="text-4xl font-extrabold tracking-tighter pb-1" style="background: -webkit-linear-gradient(45deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
         Search
       </h1>
     </a>
+    <div class="flex items-center gap-1 mr-4 shrink-0">
+      <a href={`/search?q=${encodeURIComponent(q)}`} class="px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-500/15 text-indigo-400">🔍 Web</a>
+      <a href={`/images?q=${encodeURIComponent(q)}`} class="px-3 py-1.5 rounded-md text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--button-border)] transition-colors">🖼️ {t.images_tab}</a>
+    </div>
     <div class="flex-1 w-full max-w-[700px]">
       <SearchBar initialValue={q} />
     </div>
@@ -79,16 +83,6 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
         <span>
           {t.resultsFor} <span class="font-bold text-[var(--text-color)] bg-[var(--button-border)] px-2 py-1 rounded-md">{q}</span>
         </span>
-        {localCount > 0 && (
-          <span class="text-[11px] bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-2 py-0.5 rounded-full font-semibold">
-            🏠 {localCount} local
-          </span>
-        )}
-        {ddgCount > 0 && (
-          <span class="text-[11px] bg-orange-500/10 text-orange-500 border border-orange-500/20 px-2 py-0.5 rounded-full font-semibold">
-            🦆 {ddgCount} DuckDuckGo
-          </span>
-        )}
         {totalLocal > 0 && (
           <span class="text-[11px] text-[var(--text-muted)] opacity-70">
             ({totalLocal} total en índice)

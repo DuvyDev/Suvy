@@ -20,6 +20,7 @@ const lang = (langCookie === 'en' ? 'en' : 'es');
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+    <link rel="search" type="application/opensearchdescription+xml" title="DuvySearch" href="/opensearch.xml" />
     <!-- Simple inline script to apply theme on load avoiding flash -->
     <script is:inline>
       const theme = localStorage.getItem('theme');

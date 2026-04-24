@@ -17,7 +17,6 @@ const displayUrl = (() => {
   }
 })();
 
-const isLocal = result.source === 'local';
 ---
 
 <div class="mb-6 max-w-[700px] w-full">
@@ -30,20 +29,24 @@ const isLocal = result.source === 'local';
         <div class="flex flex-col">
           <span class="text-xs text-[var(--text-muted)] truncate max-w-[250px] sm:max-w-[400px] font-medium">{displayUrl}</span>
         </div>
-        <!-- Source badge -->
-        <span class:list={[
-          'ml-auto shrink-0 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border',
-          isLocal
-            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-            : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-        ]}>
-          {isLocal ? '🏠 Local' : '🦆 DDG'}
-        </span>
       </div>
       <h3 class="text-[22px] text-[var(--link-color)] group-hover:underline visited:text-[var(--link-visited)] font-semibold leading-tight line-clamp-2">
         {result.title}
       </h3>
     </a>
-    <p class="text-[15px] text-[var(--text-color)] leading-relaxed line-clamp-3 opacity-90 font-light" set:html={result.content}></p>
+    <p class="result-content text-[15px] text-[var(--text-color)] leading-relaxed line-clamp-3 opacity-90 font-light" set:html={result.content}></p>
   </div>
 </div>
+
+<style is:global>
+  /* Force search highlight to be bold only — no yellow background */
+  .result-content b,
+  .result-content strong,
+  .result-content mark,
+  .result-content span[style*="background"],
+  .result-content span[style*="BACKGROUND"] {
+    background: transparent !important;
+    color: inherit !important;
+    font-weight: 600 !important;
+  }
+</style>

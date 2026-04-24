@@ -1,0 +1,329 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SearchBar from '../components/SearchBar.astro';
+import ThemeToggle from '../components/ThemeToggle.astro';
+import LanguageToggle from '../components/LanguageToggle.astro';
+import { searchCrawlerImages, type ImageResult } from '../lib/duvycrawl';
+import { getTranslation } from '../i18n/translations';
+
+const q = Astro.url.searchParams.get('q') || '';
+const pageParam = parseInt(Astro.url.searchParams.get('page') || '1', 10);
+const currentPage = pageParam >= 1 ? pageParam : 1;
+const langCookie = Astro.cookies.get('lang')?.value;
+const t = getTranslation(langCookie);
+
+const LIMIT = 24;
+
+let images: ImageResult[] = [];
+let total = 0;
+
+if (q) {
+  const result = await searchCrawlerImages(q, LIMIT, currentPage);
+  images = result.results;
+  total = result.total;
+}
+
+const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+
+function getPaginationRange(current: number, max: number): (number | '...')[] {
+  if (max <= 7) return Array.from({ length: max }, (_, i) => i + 1);
+  if (current <= 3) return [1, 2, 3, 4, '...', max];
+  if (current >= max - 2) return [1, '...', max - 3, max - 2, max - 1, max];
+  return [1, '...', current - 1, current, current + 1, '...', max];
+}
+
+const paginationRange = getPaginationRange(currentPage, totalPages);
+---
+
+<Layout title={q ? `${q} - ${t.images_title}` : t.images_title}>
+  <header class="search-header">
+    <div class="header-left">
+      <a href="/" class="logo">DuvySearch</a>
+      <div class="search-tabs">
+        <a href={`/search?q=${encodeURIComponent(q)}`} class="tab">🔍 Web</a>
+        <a href={`/images?q=${encodeURIComponent(q)}`} class="tab active">🖼️ {t.images_tab}</a>
+      </div>
+    </div>
+    <div class="header-center">
+      <SearchBar query={q} action="/images" compact />
+    </div>
+    <div class="header-right">
+      <LanguageToggle />
+      <ThemeToggle />
+    </div>
+  </header>
+
+  <main class="images-main">
+    {!q ? (
+      <div class="empty-state">
+        <p class="empty-text">{t.images_empty}</p>
+      </div>
+    ) : images.length === 0 ? (
+      <div class="empty-state">
+        <p class="empty-text">{t.images_no_results}</p>
+      </div>
+    ) : (
+      <>
+        <p class="results-count">{total} {t.images_found}</p>
+
+        <div class="image-grid">
+          {images.map((img) => (
+            <a
+              href={img.pageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="image-card"
+              title={img.alt || img.title}
+            >
+              <div class="image-wrapper">
+                <img
+                  src={img.url}
+                  alt={img.alt || ''}
+                  loading="lazy"
+                  decoding="async"
+                  onerror="this.closest('.image-card').style.display='none'"
+                />
+              </div>
+              <div class="image-info">
+                <span class="image-title">{img.alt || img.title || img.domain}</span>
+                <span class="image-domain">{img.domain}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+
+        {totalPages > 1 && (
+          <nav class="pagination" aria-label="Image pagination">
+            {currentPage > 1 && (
+              <a href={`/images?q=${encodeURIComponent(q)}&page=${currentPage - 1}`} class="page-btn">←</a>
+            )}
+            {paginationRange.map((p) =>
+              p === '...' ? (
+                <span class="page-ellipsis">…</span>
+              ) : (
+                <a
+                  href={`/images?q=${encodeURIComponent(q)}&page=${p}`}
+                  class:list={['page-btn', { active: p === currentPage }]}
+                >
+                  {p}
+                </a>
+              )
+            )}
+            {currentPage < totalPages && (
+              <a href={`/images?q=${encodeURIComponent(q)}&page=${currentPage + 1}`} class="page-btn">→</a>
+            )}
+          </nav>
+        )}
+      </>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .search-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #6366f1, #a855f7, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-decoration: none;
+  }
+
+  .search-tabs {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .tab {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+  }
+
+  .tab:hover { background: var(--bg-secondary); }
+  .tab.active {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+  }
+
+  .header-center { flex: 1; max-width: 500px; }
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+
+  .images-main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40vh;
+  }
+
+  .empty-text {
+    color: var(--text-muted);
+    font-size: 1.1rem;
+  }
+
+  .results-count {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .image-card {
+    display: flex;
+    flex-direction: column;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    transition: all 0.25s ease;
+    cursor: pointer;
+  }
+
+  .image-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+
+  .image-wrapper {
+    width: 100%;
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    background: var(--bg-tertiary, rgba(0,0,0,0.1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .image-card:hover .image-wrapper img {
+    transform: scale(1.05);
+  }
+
+  .image-info {
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .image-title {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .image-domain {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 2rem;
+    padding-bottom: 2rem;
+  }
+
+  .page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 0.5rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .page-btn:hover {
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+    color: #818cf8;
+  }
+
+  .page-btn.active {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: white;
+    border-color: transparent;
+  }
+
+  .page-ellipsis {
+    color: var(--text-muted);
+    padding: 0 0.3rem;
+  }
+
+  @media (max-width: 768px) {
+    .search-header {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .header-center {
+      order: 3;
+      max-width: 100%;
+      width: 100%;
+    }
+    .image-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 0.5rem;
+    }
+  }
+</style>

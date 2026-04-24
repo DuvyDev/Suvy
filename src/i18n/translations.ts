@@ -19,6 +19,11 @@ export const translations = {
     sourceDDG: 'DuckDuckGo',
     poweredByLocal: 'Resultados de tu índice local',
     poweredByDDG: 'Resultado complementario de DuckDuckGo',
+    images_title: 'Imágenes',
+    images_tab: 'Imágenes',
+    images_empty: 'Busca imágenes indexadas por tu crawler',
+    images_no_results: 'No se encontraron imágenes',
+    images_found: 'imágenes encontradas',
   },
   en: {
     searchPlaceholder: 'Search...',
@@ -38,6 +43,11 @@ export const translations = {
     sourceDDG: 'DuckDuckGo',
     poweredByLocal: 'Results from your local index',
     poweredByDDG: 'Supplementary result from DuckDuckGo',
+    images_title: 'Images',
+    images_tab: 'Images',
+    images_empty: 'Search images indexed by your crawler',
+    images_no_results: 'No images found',
+    images_found: 'images found',
   }
 };
 
