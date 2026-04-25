@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 
-const CRAWLER_API = 'http://localhost:8080/api/v1';
+const CRAWLER_API = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
 const CRAWLER_TIMEOUT_MS = 8000;
 
 export const POST: APIRoute = async ({ request }) => {
