@@ -38,7 +38,7 @@ services:
   #   container_name: duvycrawl
   #   restart: unless-stopped
   #   ports:
-  #     - "8080:8080"
+  #     - "8800:8800"
   #   volumes:
   #     - ./crawler-data:/data
   #   networks:
