@@ -2,9 +2,9 @@ import type { SearchResultItem } from './duckduckgo';
 
 /**
  * Base URL for the Duvycrawl API.
- * Both services are expected to run on the same machine.
+ * Configurable via the CRAWLER_API environment variable.
  */
-const CRAWLER_API = 'http://localhost:8080/api/v1';
+const CRAWLER_API = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
 
 /** Timeout for crawler API requests (ms). Keep short so DDG fallback kicks in fast. */
 const CRAWLER_TIMEOUT_MS = 3000;

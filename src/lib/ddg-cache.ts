@@ -4,7 +4,7 @@ import { join } from 'node:path';
 const CACHE_DIR = 'data';
 const CACHE_FILE = join(CACHE_DIR, 'ddg-cache.json');
 
-const TTL_MS = 120 * 60 * 1000;
+const TTL_MS = parseInt(process.env.DDG_CACHE_TTL_MINUTES || '120', 10) * 60 * 1000;
 const MAX_ENTRIES = 5000;
 
 type CacheStore = Record<string, number>;

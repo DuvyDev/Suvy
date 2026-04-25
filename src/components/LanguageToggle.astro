@@ -1,8 +1,8 @@
 ---
 const langCookie = Astro.cookies.get('lang')?.value;
-const currentLang = langCookie === 'en' ? 'en' : 'es';
-const targetLang = currentLang === 'es' ? 'en' : 'es';
-const label = currentLang === 'es' ? 'English' : 'Español';
+const currentLang = langCookie === 'es' ? 'es' : 'en';
+const targetLang = currentLang === 'en' ? 'es' : 'en';
+const label = currentLang === 'en' ? 'Español' : 'English';
 ---
 
 <button id="lang-toggle" data-lang={targetLang} class="text-[var(--link-color)] hover:underline text-sm ml-2 cursor-pointer">

@@ -24,9 +24,9 @@ export interface SearchOptions {
   filters?: CrawlerFilters;
 }
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = parseInt(process.env.RESULTS_PER_PAGE || '10', 10);
 
-const DDG_FEED_RESULTS = 10;
+const DDG_FEED_RESULTS = parseInt(process.env.DDG_RESULTS || '3', 10);
 
 /**
  * Parse search query to extract operators like site:domain.
@@ -84,14 +84,19 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
 
   let localResults: SearchResult[] = localRaw.map((r) => ({ ...r, source: 'local' as const }));
 
-  // Extract Wikipedia result if present.
+  const newsMax = parseInt(process.env.NEWS_MAX_ITEMS || '5', 10);
+  const wikiEnabled = process.env.WIKIPEDIA_CARD_ENABLED !== 'false';
+
+  // Extract Wikipedia result if present and enabled.
   let wikipediaResult: SearchResult | undefined;
-  const wikiIndex = localResults.findIndex(
-    (r) => r.meta.domain === 'wikipedia.org' || r.meta.domain.endsWith('.wikipedia.org')
-  );
-  if (wikiIndex >= 0) {
-    wikipediaResult = localResults[wikiIndex];
-    localResults = localResults.filter((_, i) => i !== wikiIndex);
+  if (wikiEnabled) {
+    const wikiIndex = localResults.findIndex(
+      (r) => r.meta.domain === 'wikipedia.org' || r.meta.domain.endsWith('.wikipedia.org')
+    );
+    if (wikiIndex >= 0) {
+      wikipediaResult = localResults[wikiIndex];
+      localResults = localResults.filter((_, i) => i !== wikiIndex);
+    }
   }
 
   // Extract news results with rich schema (image + publishedAt) for the sidebar card.
@@ -108,7 +113,7 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
       const tb = b.meta.publishedAt ? new Date(b.meta.publishedAt).getTime() : 0;
       return tb - ta; // newest first
     })
-    .slice(0, 5);
+    .slice(0, newsMax);
 
   // Fetch sitelinks for the first result's domain (page 1 only).
   let sitelinks: SearchResultItem[] = [];

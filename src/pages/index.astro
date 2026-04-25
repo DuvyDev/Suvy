@@ -7,16 +7,26 @@ import { getTranslation } from '../i18n/translations';
 
 const langCookie = Astro.cookies.get('lang')?.value;
 const t = getTranslation(langCookie);
+
+const metaDesc = langCookie === 'es'
+  ? 'Suvy — Un buscador personal y privado. Busca en tu propio índice local complementado con DuckDuckGo. Sin rastreo, sin perfiles, solo resultados.'
+  : 'Suvy — A personal and private search engine. Search your own local index supplemented with DuckDuckGo. No tracking, no profiles, just results.';
 ---
 
-<Layout title="Search">
+<Layout title="Suvy" description={metaDesc} canonical="/">
   <main class="flex-1 flex flex-col justify-center items-center px-4 w-full h-[calc(100vh-80px)]">
     
     <!-- Logo -->
-    <div class="mb-10 animate-fade-in-up">
-      <h1 class="text-7xl sm:text-9xl font-extrabold tracking-tighter text-center pb-4" style="background: -webkit-linear-gradient(45deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        Search
-      </h1>
+    <div class="mb-10 animate-fade-in-up flex flex-col items-center">
+      <div class="flex items-center gap-4 mb-3">
+        <img src="/logo.webp" alt="Suvy" class="h-20 sm:h-28 w-auto drop-shadow-lg" width="112" height="112" />
+        <h1 class="text-7xl sm:text-9xl font-extrabold tracking-tighter text-center" style="background: -webkit-linear-gradient(45deg, #4285F4, #EA4335, #FBBC05, #34A853); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          Suvy
+        </h1>
+      </div>
+      <p class="text-[var(--text-muted)] text-sm sm:text-base font-medium tracking-wide">
+        {langCookie === 'es' ? 'Un buscador personal y privado' : 'A personal and private search engine'}
+      </p>
     </div>
 
     <!-- Search Bar -->
@@ -36,7 +46,7 @@ const t = getTranslation(langCookie);
 
     <!-- Language Info -->
     <div class="mt-12 text-sm text-[var(--text-muted)] animate-fade-in-up" style="animation-delay: 0.3s;">
-      Ofrecido por Search en: 
+      {t.offeredBy}
       <span class="font-medium">
         <LanguageToggle />
       </span>
@@ -49,18 +59,26 @@ const t = getTranslation(langCookie);
           <svg class="w-5 h-5 text-[var(--link-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
           </svg>
-          Añadir URL al índice
+          {t.addUrlTitle}
         </h2>
-        <p class="text-sm text-[var(--text-muted)] mb-4">Introduce una URL para que el crawler la indexe y aparezca en futuras búsquedas.</p>
+        <p class="text-sm text-[var(--text-muted)] mb-4">{t.addUrlDesc}</p>
         <div class="flex gap-3">
           <input 
             type="url" 
             id="crawl-url"
-            placeholder="https://ejemplo.com"
+            placeholder="https://example.com"
             class="flex-1 bg-[var(--button-bg)] border border-[var(--button-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-color)] outline-none focus:border-[var(--link-color)] transition-colors"
+            data-msg-empty={t.enterValidUrl}
+            data-msg-protocol={t.urlMustStartWith}
           />
-          <button id="crawl-btn" class="bg-[var(--button-bg)] hover:bg-[var(--button-hover)] border border-[var(--button-border)] text-[var(--button-text)] px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-300 cursor-pointer flex items-center gap-2 whitespace-nowrap">
-            <span id="crawl-btn-text">Encolar</span>
+          <button id="crawl-btn" class="bg-[var(--button-bg)] hover:bg-[var(--button-hover)] border border-[var(--button-border)] text-[var(--button-text)] px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-300 cursor-pointer flex items-center gap-2 whitespace-nowrap"
+            data-msg-sending={t.sending}
+            data-msg-success={t.urlQueued}
+            data-msg-success-skip={t.urlQueuedWithSkip}
+            data-msg-error={t.errorQueueing}
+            data-msg-crawler-down={t.crawlerNotRunning}
+          >
+            <span id="crawl-btn-text">{t.enqueue}</span>
             <svg id="crawl-btn-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
             </svg>
@@ -75,15 +93,19 @@ const t = getTranslation(langCookie);
   <footer class="bg-[var(--footer-bg)] text-[var(--footer-text)] backdrop-blur-md border-t border-[var(--button-border)] flex flex-col transition-colors duration-300">
     <div class="flex flex-col sm:flex-row justify-between items-center px-8 py-4 text-sm font-medium flex-wrap gap-4">
       <div class="flex space-x-6">
-        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.about}</a>
-        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.privacy}</a>
-        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.terms}</a>
+        <a href="/about" class="hover:text-[var(--link-color)] transition-colors">{t.about}</a>
+        <a href="/privacy" class="hover:text-[var(--link-color)] transition-colors">{t.privacy}</a>
+        <a href="/terms" class="hover:text-[var(--link-color)] transition-colors">{t.terms}</a>
       </div>
       <div class="flex space-x-6 items-center">
         <div class="hover:text-[var(--link-color)] transition-colors">
           <ThemeToggle />
         </div>
-        <a href="#" class="hover:text-[var(--link-color)] transition-colors">{t.settings}</a>
+        <a href="https://github.com/DuvyDev/Suvy" target="_blank" rel="noopener noreferrer" class="hover:text-[var(--link-color)] transition-colors" aria-label="GitHub">
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
       </div>
     </div>
   </footer>
@@ -94,14 +116,8 @@ const t = getTranslation(langCookie);
     animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
   @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .crawl-box {
@@ -115,9 +131,17 @@ const t = getTranslation(langCookie);
   const input = document.getElementById('crawl-url');
   const btn = document.getElementById('crawl-btn');
   const status = document.getElementById('crawl-status');
-  const btnText = document.getElementById('crawl-btn-text');
-  const btnIcon = document.getElementById('crawl-btn-icon');
   if (!input || !btn || !status) return;
+
+  const msgs = {
+    empty: input.getAttribute('data-msg-empty'),
+    protocol: input.getAttribute('data-msg-protocol'),
+    sending: btn.getAttribute('data-msg-sending'),
+    success: btn.getAttribute('data-msg-success'),
+    successSkip: btn.getAttribute('data-msg-success-skip'),
+    error: btn.getAttribute('data-msg-error'),
+    crawlerDown: btn.getAttribute('data-msg-crawler-down'),
+  };
 
   function setStatus(msg, type) {
     status.textContent = msg;
@@ -129,19 +153,13 @@ const t = getTranslation(langCookie);
 
   async function submitUrl() {
     const url = input.value.trim();
-    if (!url) {
-      setStatus('Por favor introduce una URL válida.', 'error');
-      return;
-    }
+    if (!url) { setStatus(msgs.empty, 'error'); return; }
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      setStatus('La URL debe comenzar con http:// o https://', 'error');
-      return;
+      setStatus(msgs.protocol, 'error'); return;
     }
-
     btn.disabled = true;
     btn.classList.add('opacity-60', 'cursor-not-allowed');
-    setStatus('Enviando...', 'info');
-
+    setStatus(msgs.sending, 'info');
     try {
       const res = await fetch('/api/crawl', {
         method: 'POST',
@@ -149,27 +167,23 @@ const t = getTranslation(langCookie);
         body: JSON.stringify({ urls: [url], force: true }),
       });
       const data = await res.json();
-
       if (res.ok && data.success) {
         const msg = data.skipped > 0
-          ? `URL encolada: ${data.queued} nueva(s), ${data.skipped} ya indexada(s) recientemente.`
-          : 'URL encolada correctamente para indexación.';
+          ? msgs.successSkip.replace('{queued}', data.queued).replace('{skipped}', data.skipped)
+          : msgs.success;
         setStatus(msg, 'success');
         input.value = '';
       } else {
-        setStatus(data.error || 'Error al encolar la URL.', 'error');
+        setStatus(data.error || msgs.error, 'error');
       }
     } catch (e) {
-      setStatus('No se pudo conectar con el crawler. ¿Está corriendo?', 'error');
+      setStatus(msgs.crawlerDown, 'error');
     } finally {
       btn.disabled = false;
       btn.classList.remove('opacity-60', 'cursor-not-allowed');
     }
   }
-
   btn.addEventListener('click', submitUrl);
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') submitUrl();
-  });
+  input.addEventListener('keydown', function(e) { if (e.key === 'Enter') submitUrl(); });
 })();
 </script>

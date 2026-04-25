@@ -4,12 +4,24 @@ import { getTranslation } from '../i18n/translations';
 
 export interface Props {
   title: string;
+  description?: string;
+  ogImage?: string;
+  canonical?: string;
+  noindex?: boolean;
 }
 
-const { title } = Astro.props;
+const { title, description, ogImage, canonical, noindex } = Astro.props;
 const langCookie = Astro.cookies.get('lang')?.value;
-const lang = (langCookie === 'en' ? 'en' : 'es');
-
+const lang = (langCookie === 'es' ? 'es' : 'en');
+const defaultLang = (process.env.DEFAULT_LANG || 'es') as 'es' | 'en';
+const siteUrl = process.env.SITE_URL || 'http://localhost:8800';
+const fullTitle = title.includes('Suvy') ? title : `${title} | Suvy`;
+const metaDescription = description || (lang === 'en'
+  ? 'Suvy — A personal and private search engine powered by your own crawler.'
+  : 'Suvy — Un buscador personal y privado impulsado por tu propio crawler.'
+);
+const ogImageUrl = ogImage ? (ogImage.startsWith('http') ? ogImage : `${siteUrl}${ogImage}`) : `${siteUrl}/ogimage.jpg`;
+const canonicalUrl = canonical ? (canonical.startsWith('http') ? canonical : `${siteUrl}${canonical}`) : `${siteUrl}${Astro.url.pathname}`;
 ---
 
 <!doctype html>
@@ -17,11 +29,36 @@ const lang = (langCookie === 'en' ? 'en' : 'es');
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title}</title>
-    <link rel="search" type="application/opensearchdescription+xml" title="DuvySearch" href="/opensearch.xml" />
-    <!-- Simple inline script to apply theme on load avoiding flash -->
+    <title>{fullTitle}</title>
+    <meta name="description" content={metaDescription} />
+    <meta name="author" content="Pablo M. Duval (DuvyDev)" />
+    <meta name="robots" content={noindex ? 'noindex, nofollow' : 'index, follow'} />
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Suvy" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={metaDescription} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:locale" content={lang === 'en' ? 'en_US' : 'es_ES'} />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={metaDescription} />
+    <meta name="twitter:image" content={ogImageUrl} />
+
+    <!-- OpenSearch -->
+    <link rel="search" type="application/opensearchdescription+xml" title="Suvy" href="/opensearch.xml" />
+
+    <!-- Theme script (must be inline to avoid flash) -->
     <script is:inline>
       const theme = localStorage.getItem('theme');
       if (theme === 'light') {

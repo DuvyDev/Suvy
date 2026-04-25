@@ -1,7 +1,18 @@
 {
-  "name": "irregular-inclination",
+  "name": "suvy",
   "type": "module",
-  "version": "0.0.1",
+  "version": "1.0.0",
+  "description": "Suvy — A personal and private search engine powered by your own crawler.",
+  "author": "Pablo M. Duval <DuvyDev>",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DuvyDev/Suvy.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DuvyDev/Suvy/issues"
+  },
+  "homepage": "https://github.com/DuvyDev/Suvy#readme",
   "engines": {
     "node": ">=22.12.0"
   },

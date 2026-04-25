@@ -2,8 +2,7 @@ import type { APIRoute } from 'astro';
 
 /**
  * OpenSearch Description Document.
- * Allows browsers to discover and register MySearch as a search engine.
- * Includes search suggestions support.
+ * Allows browsers to discover and register Suvy as a search engine.
  */
 export const GET: APIRoute = async ({ url }) => {
   const baseUrl = `${url.protocol}//${url.host}`;
@@ -11,8 +10,8 @@ export const GET: APIRoute = async ({ url }) => {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/"
                        xmlns:moz="http://www.mozilla.org/2006/browser/search/">
-  <ShortName>DuvySearch</ShortName>
-  <Description>Search with DuvySearch - your personal search engine</Description>
+  <ShortName>Suvy</ShortName>
+  <Description>Search with Suvy — a personal and private search engine</Description>
   <InputEncoding>UTF-8</InputEncoding>
   <Url type="text/html" method="get"
        template="${baseUrl}/search?q={searchTerms}"/>

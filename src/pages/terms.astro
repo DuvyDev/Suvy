@@ -1,0 +1,86 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getTranslation } from '../i18n/translations';
+
+const langCookie = Astro.cookies.get('lang')?.value;
+const t = getTranslation(langCookie);
+
+const metaDesc = langCookie === 'es'
+  ? 'Términos de uso de Suvy. Software libre bajo licencia Apache 2.0.'
+  : 'Suvy terms of use. Free software under Apache 2.0 license.';
+---
+
+<Layout title={`${t.terms} | Suvy`} description={metaDesc} canonical="/terms">
+  <main class="flex-1 px-4 sm:px-8 lg:px-[180px] py-12 w-full max-w-4xl mx-auto">
+    <a href="/" class="text-[var(--link-color)] text-sm font-medium hover:underline mb-6 inline-block">{t.backToSuvy}</a>
+    
+    <h1 class="text-4xl font-extrabold text-[var(--text-color)] mb-6">{t.terms}</h1>
+    <p class="text-[var(--text-muted)] text-sm mb-8">{langCookie === 'es' ? 'Última actualización: 25 de abril de 2026' : 'Last updated: April 25, 2026'}</p>
+    
+    <div class="prose prose-lg text-[var(--text-color)] space-y-6">
+      <p>
+        {langCookie === 'es'
+          ? 'Al utilizar <strong>Suvy</strong>, aceptas los siguientes términos. Si no estás de acuerdo, por favor no uses el servicio.'
+          : 'By using <strong>Suvy</strong>, you agree to the following terms. If you do not agree, please do not use the service.'
+        }
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '1. Licencia' : '1. License'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Suvy es software libre distribuido bajo la'
+          : 'Suvy is free software distributed under the'
+        } <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">Apache License 2.0</a>{langCookie === 'es'
+          ? '. Puedes usar, modificar y distribuir el código siempre que respetes los términos de dicha licencia.'
+          : '. You may use, modify, and distribute the code as long as you respect the terms of that license.'
+        }
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '2. Uso permitido' : '2. Permitted use'}</h2>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>{langCookie === 'es' ? 'Uso personal y no comercial sin restricciones.' : 'Personal and non-commercial use without restrictions.'}</li>
+        <li>{langCookie === 'es' ? 'Uso comercial permitido bajo los términos de Apache 2.0.' : 'Commercial use permitted under the terms of Apache 2.0.'}</li>
+        <li>{langCookie === 'es' ? 'Modificación y redistribución permitidas con atribución.' : 'Modification and redistribution permitted with attribution.'}</li>
+      </ul>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '3. Uso prohibido' : '3. Prohibited use'}</h2>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>{langCookie === 'es' ? 'No utilices Suvy para actividades ilegales en tu jurisdicción.' : 'Do not use Suvy for illegal activities in your jurisdiction.'}</li>
+        <li>{langCookie === 'es' ? 'No intentes sobrecargar deliberadamente instancias ajenas (ataques DoS).' : 'Do not deliberately overload other instances (DoS attacks).'}</li>
+        <li>{langCookie === 'es' ? 'No elimines ni modifiques los avisos de licencia del código fuente.' : 'Do not remove or modify license notices from the source code.'}</li>
+      </ul>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '4. Sin garantía' : '4. No warranty'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Suvy se proporciona "tal cual", sin garantía de ningún tipo, expresa o implícita. El autor no se hace responsable de daños derivados del uso del software.'
+          : 'Suvy is provided "as is", without warranty of any kind, express or implied. The author is not liable for damages arising from the use of the software.'
+        }
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '5. Terceros' : '5. Third parties'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Suvy puede consultar DuckDuckGo como fuente complementaria de resultados. El uso de DuckDuckGo está sujeto a sus propios términos y políticas. El autor de Suvy no controla ni es responsable del contenido proporcionado por DuckDuckGo.'
+          : 'Suvy may query DuckDuckGo as a supplementary result source. Use of DuckDuckGo is subject to its own terms and policies. The Suvy author does not control or is responsible for content provided by DuckDuckGo.'
+        }
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '6. Cambios en los términos' : '6. Changes to terms'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Estos términos pueden actualizarse ocasionalmente. Los cambios se publicarán en esta página con la fecha de actualización correspondiente.'
+          : 'These terms may be updated occasionally. Changes will be posted on this page with the corresponding update date.'
+        }
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '7. Contacto' : '7. Contact'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Para consultas legales o reportes de abuso, abre un issue en'
+          : 'For legal inquiries or abuse reports, open an issue on'
+        } <a href="https://github.com/DuvyDev/Suvy/issues" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">GitHub</a>.
+      </p>
+    </div>
+  </main>
+</Layout>

@@ -1,0 +1,73 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getTranslation } from '../i18n/translations';
+
+const langCookie = Astro.cookies.get('lang')?.value;
+const t = getTranslation(langCookie);
+
+const metaDesc = langCookie === 'es'
+  ? 'Política de privacidad de Suvy. Sin rastreo, sin perfiles, sin venta de datos.'
+  : 'Suvy privacy policy. No tracking, no profiles, no data selling.';
+---
+
+<Layout title={`${t.privacy} | Suvy`} description={metaDesc} canonical="/privacy">
+  <main class="flex-1 px-4 sm:px-8 lg:px-[180px] py-12 w-full max-w-4xl mx-auto">
+    <a href="/" class="text-[var(--link-color)] text-sm font-medium hover:underline mb-6 inline-block">{t.backToSuvy}</a>
+    
+    <h1 class="text-4xl font-extrabold text-[var(--text-color)] mb-6">{t.privacy}</h1>
+    <p class="text-[var(--text-muted)] text-sm mb-8">{langCookie === 'es' ? 'Última actualización: 25 de abril de 2026' : 'Last updated: April 25, 2026'}</p>
+    
+    <div class="prose prose-lg text-[var(--text-color)] space-y-6">
+      <p>
+        {langCookie === 'es'
+          ? 'En <strong>Suvy</strong> tu privacidad es nuestra prioridad. Esta política explica qué información tratamos y, más importante, qué <strong>no</strong> tratamos.'
+          : 'At <strong>Suvy</strong>, your privacy is our priority. This policy explains what information we process and, more importantly, what we <strong>do not</strong> process.'
+        }
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '1. Información que NO recopilamos' : '1. Information we do NOT collect'}</h2>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>{langCookie === 'es' ? 'No almacenamos tu historial de búsqueda.' : 'We do not store your search history.'}</li>
+        <li>{langCookie === 'es' ? 'No construimos perfiles de usuario ni perfiles de intereses.' : 'We do not build user profiles or interest profiles.'}</li>
+        <li>{langCookie === 'es' ? 'No utilizamos cookies de seguimiento o analíticas de terceros.' : 'We do not use tracking cookies or third-party analytics.'}</li>
+        <li>{langCookie === 'es' ? 'No vendemos ni compartimos datos personales con nadie.' : 'We do not sell or share personal data with anyone.'}</li>
+        <li>{langCookie === 'es' ? 'No empleamos fingerprinting ni otras técnicas de identificación encubierta.' : 'We do not employ fingerprinting or other covert identification techniques.'}</li>
+      </ul>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '2. Información que sí procesamos' : '2. Information we do process'}</h2>
+      <p>{langCookie === 'es' ? 'Para funcionar, Suvy procesa temporalmente los siguientes datos:' : 'To function, Suvy temporarily processes the following data:'}</p>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>{langCookie === 'es' ? '<strong>Términos de búsqueda:</strong> Se envían a tu crawler local (DuvyCrawl) y, opcionalmente, a DuckDuckGo. No se registran ni persisten.' : '<strong>Search terms:</strong> Sent to your local crawler (DuvyCrawl) and, optionally, DuckDuckGo. Not logged or persisted.'}</li>
+        <li>{langCookie === 'es' ? '<strong>Preferencias de UI:</strong> Tema (claro/oscuro) e idioma se almacenan localmente en tu navegador (localStorage). Nunca en nuestros servidores.' : '<strong>UI preferences:</strong> Theme (light/dark) and language are stored locally in your browser (localStorage). Never on our servers.'}</li>
+        <li>{langCookie === 'es' ? '<strong>Cache de consultas DDG:</strong> Un archivo JSON local almacena qué términos consultamos recientemente para evitar rate-limits. No contiene resultados ni datos personales.' : '<strong>DDG query cache:</strong> A local JSON file stores which terms we recently queried to avoid rate limits. Contains no results or personal data.'}</li>
+      </ul>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '3. DuckDuckGo' : '3. DuckDuckGo'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Cuando Suvy consulta DuckDuckGo como fallback, tu IP es visible para DuckDuckGo de la misma manera que si visitaras su sitio directamente. DuckDuckGo tiene su propia'
+          : 'When Suvy queries DuckDuckGo as a fallback, your IP is visible to DuckDuckGo just as if you visited their site directly. DuckDuckGo has its own'
+        } <a href="https://duckduckgo.com/privacy" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">{langCookie === 'es' ? 'política de privacidad' : 'privacy policy'}</a> {langCookie === 'es'
+          ? 'que no controlamos. Si deseas evitar por completo esta consulta, puedes deshabilitar el fallback DDG mediante la variable de entorno'
+          : 'which we do not control. If you wish to completely avoid this query, you can disable the DDG fallback via the environment variable'
+        } <code>DDG_ENABLED=false</code>.
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '4. Self-hosting' : '4. Self-hosting'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Suvy está diseñado para ser auto-alojado. Si instalas tu propia instancia, tú eres el único responsable de los datos que circulan por ella. Nosotros no tenemos acceso a tu servidor.'
+          : 'Suvy is designed to be self-hosted. If you install your own instance, you are solely responsible for the data flowing through it. We have no access to your server.'
+        }
+      </p>
+      
+      <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '5. Contacto' : '5. Contact'}</h2>
+      <p>
+        {langCookie === 'es'
+          ? 'Para cualquier duda sobre privacidad, abre un issue en'
+          : 'For any privacy questions, open an issue on'
+        } <a href="https://github.com/DuvyDev/Suvy/issues" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">GitHub</a>.
+      </p>
+    </div>
+  </main>
+</Layout>

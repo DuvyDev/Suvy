@@ -35,10 +35,10 @@ function getPaginationRange(current: number, max: number): (number | '...')[] {
 const paginationRange = getPaginationRange(currentPage, totalPages);
 ---
 
-<Layout title={q ? `${q} - ${t.images_title}` : t.images_title}>
+<Layout title={q ? `${q} - Imágenes | Suvy` : 'Imágenes | Suvy'} description={q ? `Imágenes indexadas para "${q}" en Suvy` : 'Busca imágenes indexadas por tu crawler con Suvy'} noindex={!q}>
   <header class="search-header">
     <div class="header-left">
-      <a href="/" class="logo">DuvySearch</a>
+      <a href="/" class="logo">Suvy</a>
       <div class="search-tabs">
         <a href={`/search?q=${encodeURIComponent(q)}`} class="tab">🔍 Web</a>
         <a href={`/images?q=${encodeURIComponent(q)}`} class="tab active">🖼️ {t.images_tab}</a>
