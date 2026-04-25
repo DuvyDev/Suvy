@@ -1,49 +1,101 @@
-version: "3.8"
-
 services:
+
+  # ─── Cloudflare Tunnel ────────────────────
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - suvy
+    networks:
+      - cloudflared-proxy
+
+  # ─── Warp (SOCKS5 proxy for crawler) ──────
+  warp:
+    image: caomingjun/warp:latest
+    container_name: warp
+    restart: unless-stopped
+    environment:
+      - WARP_SLEEP=2
+      # - WARP_LICENSE_KEY=${WARP_LICENSE_KEY} # optional
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    volumes:
+      - ./warp:/var/lib/cloudflare-warp
+    networks:
+      - duvycrawl
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "1080"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ─── Crawler Service ──────────────────────
+  duvycrawl:
+    image: ghcr.io/duvydev/duvycrawl:latest
+    container_name: duvycrawl
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ}
+      - PROXY_URL=${PROXY_URL}
+    volumes:
+      - ./crawl/data:/app/data
+      - ./crawl/configs:/app/configs:ro
+    depends_on:
+      - warp
+    networks:
+      - duvycrawl
+      - suvynet
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # ─── Search Engine ────────────────────────
   suvy:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/duvydev/suvy:latest
     container_name: suvy
     restart: unless-stopped
-    ports:
-      - "8800:8800"
     environment:
-      # Server
       PORT: 8800
-      SITE_URL: http://localhost:8800
-
-      # Crawler
-      CRAWLER_API: http://duvycrawl:8080/api/v1
+      SITE_URL: ${SITE_URL}
+      CRAWLER_API: ${CRAWLER_API}
 
       # DuckDuckGo fallback
-      DDG_ENABLED: "true"
-      DDG_RESULTS: 3
-      DDG_CACHE_TTL_MINUTES: 120
+      DDG_ENABLED: ${DDG_ENABLED}
+      DDG_RESULTS: ${DDG_RESULTS}
+      DDG_CACHE_TTL_MINUTES: ${DDG_CACHE_TTL_MINUTES}
 
       # UI settings
-      NEWS_MAX_ITEMS: 5
-      WIKIPEDIA_CARD_ENABLED: "true"
-      RESULTS_PER_PAGE: 10
-      DEFAULT_LANG: es
+      NEWS_MAX_ITEMS: ${NEWS_MAX_ITEMS}
+      WIKIPEDIA_CARD_ENABLED: ${WIKIPEDIA_CARD_ENABLED}
+      RESULTS_PER_PAGE: ${RESULTS_PER_PAGE}
+      DEFAULT_LANG: ${DEFAULT_LANG}
     volumes:
-      - ./data:/app/data
+      - ./suvy/data:/app/data
     networks:
-      - suvy-net
-
-  # Uncomment and configure if you want DuvyCrawl in the same compose
-  # duvycrawl:
-  #   image: ghcr.io/duvydev/duvycrawl:latest
-  #   container_name: duvycrawl
-  #   restart: unless-stopped
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - ./crawler-data:/data
-  #   networks:
-  #     - suvy-net
+      - cloudflared-proxy
+      - suvynet
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8800"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # Optional: expose locally for debugging only
+    ports:
+      - "127.0.0.1:${APP_PORT}:8800"
 
 networks:
-  suvy-net:
+  cloudflared-proxy:
+    driver: bridge
+  duvycrawl:
+    driver: bridge
+  suvynet:
     driver: bridge
