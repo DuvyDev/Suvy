@@ -9,7 +9,10 @@ const port = parseInt(process.env.PORT || '8800', 10);
 // https://astro.build/config
 export default defineConfig({
   output: 'server',
-  server: { port },
+  server: {
+    port,
+    host: process.env.HOST || true, // default: 0.0.0.0 for containers / tunnels
+  },
   vite: {
     plugins: [tailwindcss()]
   },
