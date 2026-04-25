@@ -1,49 +1,78 @@
 ---
-import type { SearchResult } from '../lib/search';
-import Favicon from './Favicon.astro';
-
 export interface Props {
-  result: SearchResult;
+  query: string;
+  lang: string;
 }
 
-const { result } = Astro.props;
-
-const displayUrl = (() => {
-  try {
-    const urlObj = new URL(result.url);
-    return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname !== '/' ? urlObj.pathname : ''}`;
-  } catch(e) {
-    return result.url;
-  }
-})();
-
-const domain = (() => {
-  try {
-    return new URL(result.url).hostname;
-  } catch {
-    return 'wikipedia.org';
-  }
-})();
+const { query, lang } = Astro.props;
 ---
 
-<div class="wiki-card">
+<div class="wiki-card" id="wiki-card" style="display: none;" data-query={query} data-lang={lang}>
   <div class="wiki-header">
-    <div class="wiki-icon">
-      <Favicon domain={domain} size={64} class="w-10 h-10 rounded-lg" />
+    <div class="wiki-icon" style="overflow: hidden; display: flex; align-items: center; justify-content: center;">
+      <img id="wiki-favicon" src="" alt="" class="w-10 h-10 rounded-lg" style="object-fit: contain; display: none;" />
     </div>
     <div class="wiki-title-wrap">
-      <h3 class="wiki-title">{result.title}</h3>
-      <span class="wiki-domain">{displayUrl}</span>
+      <h3 class="wiki-title" id="wiki-title"></h3>
+      <span class="wiki-domain" id="wiki-domain"></span>
     </div>
   </div>
-  <p class="wiki-content" set:html={result.content}></p>
-  <a href={result.url} target="_blank" rel="noopener noreferrer" class="wiki-link">
+  <p class="wiki-content" id="wiki-content"></p>
+  <a id="wiki-link" href="#" target="_blank" rel="noopener noreferrer" class="wiki-link">
     Leer más en Wikipedia
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
     </svg>
   </a>
 </div>
+
+<script>
+  const wikiCard = document.getElementById('wiki-card');
+  if (wikiCard) {
+    const query = wikiCard.getAttribute('data-query');
+    const lang = wikiCard.getAttribute('data-lang');
+    
+    if (query) {
+      fetch(`/api/wikipedia?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(lang || 'es')}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.found && data.result) {
+            const titleEl = document.getElementById('wiki-title');
+            if (titleEl) titleEl.textContent = data.result.title;
+            
+            let domain = 'wikipedia.org';
+            const domainEl = document.getElementById('wiki-domain');
+            try {
+              const urlObj = new URL(data.result.url);
+              domain = urlObj.hostname;
+              if (domainEl) domainEl.textContent = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname !== '/' ? urlObj.pathname : ''}`;
+            } catch(e) {
+              if (domainEl) domainEl.textContent = data.result.url;
+            }
+            
+            const favImg = document.getElementById('wiki-favicon');
+            if (favImg && favImg instanceof HTMLImageElement) {
+              favImg.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+              favImg.style.display = 'block';
+              favImg.onerror = () => {
+                favImg.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+              };
+            }
+            
+            const contentEl = document.getElementById('wiki-content');
+            if (contentEl) contentEl.innerHTML = data.result.content;
+            
+            const link = document.getElementById('wiki-link');
+            if (link && link instanceof HTMLAnchorElement) link.href = data.result.url;
+            
+            wikiCard.style.display = 'block';
+            wikiCard.classList.add('animate-fade-in-up');
+          }
+        })
+        .catch(e => console.error('Error fetching wiki:', e));
+    }
+  }
+</script>
 
 <style>
   .wiki-card {

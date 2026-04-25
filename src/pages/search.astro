@@ -205,7 +205,7 @@ const activeAfter = truncMin(afterParam);
         </ul>
       </div>
     ) : (
-      <div class:list={['results-layout', { 'has-sidebar': !!(wikipediaResult || newsResults.length || mapResult) }]}>
+      <div class:list={['results-layout', { 'has-sidebar': !!(q || newsResults.length) }]}>
         <div class="results-main">
           <div class="flex flex-col gap-2">
             {items.map((result, i) => (
@@ -259,10 +259,10 @@ const activeAfter = truncMin(afterParam);
           )}
         </div>
 
-  {(wikipediaResult || newsResults.length > 0 || mapResult) && (
+  {(q || newsResults.length > 0) && (
     <aside class="results-sidebar">
-      {wikipediaResult && <WikipediaCard result={wikipediaResult} />}
-      {mapResult && <MapCard result={mapResult} />}
+      {q && <WikipediaCard query={q} lang={langFilter || langCookie || 'es'} />}
+      {q && <MapCard query={q} lang={langFilter || langCookie || 'es'} />}
       {newsResults.length > 0 && <NewsCard items={newsResults} />}
     </aside>
   )}

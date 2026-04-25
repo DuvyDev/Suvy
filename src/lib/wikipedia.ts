@@ -225,20 +225,69 @@ export async function getWikipediaSummary(
   return undefined;
 }
 
-export async function searchAndGetFirstSummary(
+const summaryPromiseCache = new Map<string, { promise: Promise<WikipediaResult | undefined>, timestamp: number }>();
+
+export function searchAndGetFirstSummary(
   query: string,
   language: string = 'es'
 ): Promise<WikipediaResult | undefined> {
-  if (!query || query.trim() === '') return undefined;
+  if (!query || query.trim() === '') return Promise.resolve(undefined);
 
-  const searchResults = await searchWikipedia(query, 3, language);
+  const cacheKey = `${query.toLowerCase()}::${language}`;
+  const cached = summaryPromiseCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < 1000 * 60 * 5) { // 5 min cache
+    return cached.promise;
+  }
 
-  if (searchResults.length === 0) return undefined;
+  const promise = (async () => {
+    // 1. Try exact match first (natively handles redirects and exact acronyms)
+    const exactMatch = await getWikipediaSummary(query, language);
+    if (exactMatch) {
+      return exactMatch;
+    }
 
-  const rawTitle = searchResults[0].url.split('/').pop() || '';
-  const firstTitle = decodeURIComponent(rawTitle).replace(/_/g, ' ');
+    // 2. Fallback to full-text search
+    const searchResults = await searchWikipedia(query, 3, language);
 
-  return getWikipediaSummary(firstTitle, language);
+    if (searchResults.length === 0) return undefined;
+
+    const rawTitle = searchResults[0].url.split('/').pop() || '';
+    const firstTitle = decodeURIComponent(rawTitle).replace(/_/g, ' ');
+
+    // 3. Relevance check for fallback
+    // Prevent showing completely unrelated articles
+    const normalizeStr = (str: string) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const queryTokens = normalizeStr(query).split(/[\s\(\)]+/).filter(t => t.length > 2);
+    const titleTokens = normalizeStr(firstTitle).split(/[\s\(\)]+/).filter(t => t.length > 2);
+    
+    let queryMatchCount = 0;
+    for (const qt of queryTokens) {
+      if (titleTokens.some(tt => tt.includes(qt) || qt.includes(tt))) {
+        queryMatchCount++;
+      }
+    }
+
+    let titleMatchCount = 0;
+    for (const tt of titleTokens) {
+      if (queryTokens.some(qt => qt.includes(tt) || tt.includes(qt))) {
+        titleMatchCount++;
+      }
+    }
+
+    const queryRatio = queryTokens.length > 0 ? queryMatchCount / queryTokens.length : 0;
+    const titleRatio = titleTokens.length > 0 ? titleMatchCount / titleTokens.length : 0;
+    
+    const isRelevant = queryTokens.length === 0 || queryRatio > 0.5 || titleRatio > 0.5;
+
+    if (!isRelevant) {
+      return undefined;
+    }
+
+    return getWikipediaSummary(firstTitle, language);
+  })();
+
+  summaryPromiseCache.set(cacheKey, { promise, timestamp: Date.now() });
+  return promise;
 }
 
 function getApiBase(language: string): string {

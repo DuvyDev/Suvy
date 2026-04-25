@@ -2,7 +2,7 @@ import type { SearchResultItem } from './duckduckgo';
 import { requestCrawl, searchCrawlerFull, type CrawlerFilters, type CrawlerSearchResultItem } from './duvycrawl';
 import { searchDuckDuckGo } from './duckduckgo';
 import { shouldQueryDDG, markQueried } from './ddg-cache';
-import { searchAndGetFirstSummary, WikipediaResult } from './wikipedia';
+import { searchAndGetFirstSummary, type WikipediaResult } from './wikipedia';
 import { isGeoQuery } from './geodetect';
 import { geocode, type NominatimResult } from './nominatim';
 
@@ -101,53 +101,9 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
   const wikiUseApi = process.env.WIKIPEDIA_USE_API !== 'false';
   const mapEnabled = process.env.MAP_CARD_ENABLED !== 'false';
 
-  // Get Wikipedia result: prefer REST API, fallback to crawler.
+  // Wikipedia and Map are now fetched lazily on the client side to avoid blocking SSR.
   let wikipediaResult: SearchResult | WikipediaResult | undefined;
-  if (wikiEnabled) {
-    if (wikiUseApi) {
-      try {
-        const wikiApiResult = await searchAndGetFirstSummary(query, filters.lang || 'es');
-        if (wikiApiResult) {
-          wikipediaResult = wikiApiResult;
-        }
-      } catch {
-        wikipediaResult = undefined;
-      }
-    }
-    if (!wikipediaResult) {
-      const wikiIndex = localResults.findIndex(
-        (r) => r.meta.domain === 'wikipedia.org' || r.meta.domain.endsWith('.wikipedia.org')
-      );
-      if (wikiIndex >= 0) {
-        wikipediaResult = localResults[wikiIndex];
-        localResults = localResults.filter((_, i) => i !== wikiIndex);
-      }
-    }
-  }
-
-  // Resolve map result via cascade: Wikipedia coordinates → heurística → Nominatim.
   let mapResult: MapResult | undefined;
-  if (mapEnabled) {
-    const wikiCoords = (wikipediaResult as WikipediaResult | undefined)?.coordinates;
-    if (wikiCoords) {
-      mapResult = {
-        name: wikipediaResult?.title || query,
-        type: (wikipediaResult as WikipediaResult).description || 'place',
-        lat: wikiCoords.lat,
-        lon: wikiCoords.lon,
-        osmLink: `https://www.openstreetmap.org/?mlat=${wikiCoords.lat}&mlon=${wikiCoords.lon}#map=14/${wikiCoords.lat}/${wikiCoords.lon}`,
-      };
-    } else if (isGeoQuery(query)) {
-      try {
-        const geo = await geocode(query, filters.lang || 'es');
-        if (geo) {
-          mapResult = geo;
-        }
-      } catch {
-        // Silently ignore Nominatim failures — map card is non-critical.
-      }
-    }
-  }
 
   // Extract news results with rich schema (image + publishedAt) for the sidebar card.
   const newsResults: SearchResult[] = localResults
