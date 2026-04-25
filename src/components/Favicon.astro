@@ -1,0 +1,76 @@
+---
+export interface Props {
+  domain: string;
+  size?: number;
+  class?: string;
+}
+
+const { domain, size = 32, class: className = '' } = Astro.props;
+
+const ddgUrl = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+const googleUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=${size}`;
+const initial = domain.charAt(0).toUpperCase();
+---
+
+<div class:list={['favicon-wrap', className]} data-ddg={ddgUrl} data-google={googleUrl}>
+  <img class="favicon-img" src={ddgUrl} alt="" loading="lazy" />
+  <span class="favicon-letter">{initial}</span>
+</div>
+
+<style>
+  .favicon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+  .favicon-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .favicon-img.hidden {
+    display: none;
+  }
+  .favicon-letter {
+    display: none;
+    font-weight: 700;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    line-height: 1;
+  }
+  .favicon-letter.visible {
+    display: block;
+  }
+</style>
+
+<script is:inline>
+(function() {
+  function init() {
+    var wraps = document.querySelectorAll('.favicon-wrap');
+    wraps.forEach(function(wrap) {
+      var img = wrap.querySelector('.favicon-img');
+      var letter = wrap.querySelector('.favicon-letter');
+      if (!img || !letter) return;
+
+      var ddg = wrap.getAttribute('data-ddg');
+      var google = wrap.getAttribute('data-google');
+
+      img.addEventListener('error', function onError() {
+        if (img.src === ddg) {
+          img.src = google;
+        } else {
+          img.classList.add('hidden');
+          letter.classList.add('visible');
+        }
+      });
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>

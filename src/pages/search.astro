@@ -2,9 +2,11 @@
 import Layout from '../layouts/Layout.astro';
 import SearchBar from '../components/SearchBar.astro';
 import SearchResult from '../components/SearchResult.astro';
+import WikipediaCard from '../components/WikipediaCard.astro';
+import NewsCard from '../components/NewsCard.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import LanguageToggle from '../components/LanguageToggle.astro';
-import { search } from '../lib/search';
+import { search, type SearchOptions } from '../lib/search';
 import { getTranslation } from '../i18n/translations';
 
 const q = Astro.url.searchParams.get('q') || '';
@@ -13,19 +15,31 @@ const currentPage = pageParam >= 1 ? pageParam : 1;
 const langCookie = Astro.cookies.get('lang')?.value;
 const t = getTranslation(langCookie);
 
-// Perform search on the server if query exists
+// Parse filters from query params
+const afterParam = Astro.url.searchParams.get('after') || '';
+const beforeParam = Astro.url.searchParams.get('before') || '';
+const langFilter = Astro.url.searchParams.get('lang') || '';
+
+const searchOptions: SearchOptions = {
+  page: currentPage,
+  filters: {
+    ...(afterParam ? { after: afterParam } : {}),
+    ...(beforeParam ? { before: beforeParam } : {}),
+    ...(langFilter ? { lang: langFilter } : {}),
+  },
+};
+
 let results: Awaited<ReturnType<typeof search>> = {
-  results: [], localCount: 0, ddgCount: 0, page: currentPage, totalLocal: 0, hasMore: false
+  results: [], localCount: 0, ddgCount: 0, page: currentPage, totalLocal: 0, hasMore: false, sitelinks: [], newsResults: [],
 };
 
 if (q) {
-  results = await search(q, currentPage);
+  results = await search(q, searchOptions);
 }
 
-const { results: items, localCount, hasMore, totalLocal } = results;
+const { results: items, localCount, hasMore, totalLocal, wikipediaResult, sitelinks, newsResults } = results;
 const totalPages = Math.max(1, Math.ceil(totalLocal / 10));
 
-// Build pagination range (show up to 7 pages centered around current)
 function getPaginationRange(current: number, total: number): (number | '...')[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   
@@ -49,6 +63,50 @@ function getPaginationRange(current: number, total: number): (number | '...')[] 
 }
 
 const paginationRange = getPaginationRange(currentPage, totalPages);
+
+// Build URL preserving current filters
+function buildUrl(basePath: string, overrides: Record<string, string | null> = {}): string {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (afterParam && overrides.after !== null) params.set('after', afterParam);
+  if (beforeParam && overrides.before !== null) params.set('before', beforeParam);
+  if (langFilter && overrides.lang !== null) params.set('lang', langFilter);
+  for (const [key, val] of Object.entries(overrides)) {
+    if (val === null) {
+      params.delete(key);
+    } else if (val) {
+      params.set(key, val);
+    }
+  }
+  const qs = params.toString();
+  return qs ? `${basePath}?${qs}` : basePath;
+}
+
+// Date range presets
+const now = new Date();
+const dateRanges = [
+  { label: 'Cualquier fecha', after: null },
+  { label: 'Última hora', after: new Date(now.getTime() - 60 * 60 * 1000).toISOString() },
+  { label: 'Últimas 24 horas', after: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString() },
+  { label: 'Última semana', after: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString() },
+  { label: 'Último mes', after: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString() },
+  { label: 'Último año', after: new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString() },
+];
+
+const languages = [
+  { label: 'Cualquier idioma', code: null },
+  { label: 'Español', code: 'es' },
+  { label: 'Inglés', code: 'en' },
+  { label: 'Francés', code: 'fr' },
+  { label: 'Alemán', code: 'de' },
+  { label: 'Portugués', code: 'pt' },
+  { label: 'Italiano', code: 'it' },
+];
+
+function truncMin(iso?: string): string {
+  return (iso || '').slice(0, 16);
+}
+const activeAfter = truncMin(afterParam);
 ---
 
 <Layout title={`${q} - Search`}>
@@ -60,8 +118,8 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
       </h1>
     </a>
     <div class="flex items-center gap-1 mr-4 shrink-0">
-      <a href={`/search?q=${encodeURIComponent(q)}`} class="px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-500/15 text-indigo-400">🔍 Web</a>
-      <a href={`/images?q=${encodeURIComponent(q)}`} class="px-3 py-1.5 rounded-md text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--button-border)] transition-colors">🖼️ {t.images_tab}</a>
+      <a href={buildUrl('/search')} class="px-3 py-1.5 rounded-md text-sm font-medium bg-indigo-500/15 text-indigo-400">🔍 Web</a>
+      <a href={buildUrl('/images')} class="px-3 py-1.5 rounded-md text-sm font-medium text-[var(--text-muted)] hover:bg-[var(--button-border)] transition-colors">🖼️ {t.images_tab}</a>
     </div>
     <div class="flex-1 w-full max-w-[700px]">
       <SearchBar initialValue={q} />
@@ -79,9 +137,9 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
   <main class="flex-1 px-4 sm:px-8 lg:px-[180px] py-8 w-full max-w-7xl animate-fade-in">
     
     {q ? (
-      <div class="text-sm text-[var(--text-muted)] mb-8 font-medium flex flex-wrap items-center gap-3">
+      <div class="text-sm text-[var(--text-muted)] mb-6 font-medium flex flex-wrap items-center gap-3">
         <span>
-          {t.resultsFor} <span class="font-bold text-[var(--text-color)] bg-[var(--button-border)] px-2 py-1 rounded-md">{q}</span>
+          Resultados para <span class="font-bold text-[var(--text-color)] bg-[var(--button-border)] px-2 py-1 rounded-md">{q}</span>
         </span>
         {totalLocal > 0 && (
           <span class="text-[11px] text-[var(--text-muted)] opacity-70">
@@ -90,6 +148,50 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
         )}
       </div>
     ) : null}
+
+    <!-- Tools menu -->
+    {q && (
+      <div class="mb-6 relative">
+        <button id="tools-toggle" class="tools-btn">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+          </svg>
+          Herramientas
+          <svg class="w-3 h-3 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        <div id="tools-dropdown" class="tools-dropdown">
+          <div class="tools-section">
+            <span class="tools-label">Rango de fechas</span>
+            <div class="tools-options">
+              {dateRanges.map((r) => (
+                <a
+                  href={r.after ? buildUrl('/search', { after: r.after, before: null, page: '1' }) : buildUrl('/search', { after: null, before: null, page: '1' })}
+                  class:list={['tools-chip', { active: activeAfter === truncMin(r.after || '') }]}
+                >
+                  {r.label}
+                </a>
+              ))}
+            </div>
+          </div>
+          <div class="tools-divider"></div>
+          <div class="tools-section">
+            <span class="tools-label">Idioma</span>
+            <div class="tools-options">
+              {languages.map((l) => (
+                <a
+                  href={l.code ? buildUrl('/search', { lang: l.code, page: '1' }) : buildUrl('/search', { lang: null, page: '1' })}
+                  class:list={['tools-chip', { active: langFilter === (l.code || '') }]}
+                >
+                  {l.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
 
     {q && items.length === 0 ? (
       <div class="mt-12 p-8 rounded-2xl bg-[var(--card-bg)] backdrop-blur-md border border-[var(--button-border)]">
@@ -102,72 +204,67 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
         </ul>
       </div>
     ) : (
-      <div class="flex flex-col gap-2">
-        {items.map((result, i) => (
-          <div class="animate-fade-in-up" style={`animation-delay: ${i * 0.05}s;`}>
-            <SearchResult result={result} />
+      <div class:list={['results-layout', { 'has-sidebar': !!(wikipediaResult || newsResults.length) }]}>
+        <div class="results-main">
+          <div class="flex flex-col gap-2">
+            {items.map((result, i) => (
+              <div class="animate-fade-in-up" style={`animation-delay: ${i * 0.05}s;`}>
+                <SearchResult result={result} sitelinks={i === 0 ? sitelinks : []} />
+              </div>
+            ))}
           </div>
-        ))}
+
+          <!-- Pagination -->
+          {q && items.length > 0 && totalPages > 1 && (
+            <nav class="flex justify-center items-center gap-2 mt-12 mb-8 animate-fade-in" aria-label="Pagination">
+              {currentPage > 1 ? (
+                <a href={buildUrl('/search', { page: String(currentPage - 1) })} class="pagination-btn" aria-label="Previous page">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </a>
+              ) : (
+                <span class="pagination-btn opacity-30 pointer-events-none">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                  </svg>
+                </span>
+              )}
+
+              {paginationRange.map((p) => (
+                p === '...' ? (
+                  <span class="px-2 text-[var(--text-muted)] select-none">…</span>
+                ) : p === currentPage ? (
+                  <span class="pagination-btn pagination-active">{p}</span>
+                ) : (
+                  <a href={buildUrl('/search', { page: String(p) })} class="pagination-btn">{p}</a>
+                )
+              ))}
+
+              {hasMore ? (
+                <a href={buildUrl('/search', { page: String(currentPage + 1) })} class="pagination-btn" aria-label="Next page">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </a>
+              ) : (
+                <span class="pagination-btn opacity-30 pointer-events-none">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              )}
+            </nav>
+          )}
+        </div>
+
+        {(wikipediaResult || newsResults.length > 0) && (
+          <aside class="results-sidebar">
+            {wikipediaResult && <WikipediaCard result={wikipediaResult} />}
+            {newsResults.length > 0 && <NewsCard items={newsResults} />}
+          </aside>
+        )}
       </div>
-    )}
-
-    <!-- Pagination -->
-    {q && items.length > 0 && totalPages > 1 && (
-      <nav class="flex justify-center items-center gap-2 mt-12 mb-8 animate-fade-in" aria-label="Pagination">
-        {/* Previous button */}
-        {currentPage > 1 ? (
-          <a
-            href={`/search?q=${encodeURIComponent(q)}&page=${currentPage - 1}`}
-            class="pagination-btn"
-            aria-label="Previous page"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </a>
-        ) : (
-          <span class="pagination-btn opacity-30 pointer-events-none">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </span>
-        )}
-
-        {/* Page numbers */}
-        {paginationRange.map((p) => (
-          p === '...' ? (
-            <span class="px-2 text-[var(--text-muted)] select-none">…</span>
-          ) : p === currentPage ? (
-            <span class="pagination-btn pagination-active">{p}</span>
-          ) : (
-            <a
-              href={`/search?q=${encodeURIComponent(q)}&page=${p}`}
-              class="pagination-btn"
-            >
-              {p}
-            </a>
-          )
-        ))}
-
-        {/* Next button */}
-        {hasMore ? (
-          <a
-            href={`/search?q=${encodeURIComponent(q)}&page=${currentPage + 1}`}
-            class="pagination-btn"
-            aria-label="Next page"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </a>
-        ) : (
-          <span class="pagination-btn opacity-30 pointer-events-none">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </span>
-        )}
-      </nav>
     )}
   </main>
 </Layout>
@@ -184,14 +281,125 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
     to { opacity: 1; }
   }
   @keyframes fadeInUp {
-    from {
-      opacity: 0;
-      transform: translateY(15px);
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-layout {
+    display: flex;
+    gap: 2rem;
+  }
+  .results-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .results-sidebar {
+    width: 340px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  @media (max-width: 1024px) {
+    .results-layout.has-sidebar {
+      flex-direction: column;
     }
-    to {
-      opacity: 1;
-      transform: translateY(0);
+    .results-sidebar {
+      width: 100%;
+      max-width: 700px;
     }
+  }
+
+  .tools-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--card-bg);
+    border: 1px solid var(--button-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .tools-btn:hover {
+    background: var(--button-hover);
+    border-color: var(--search-border);
+  }
+  .tools-btn .chevron {
+    transition: transform 0.2s;
+  }
+  .tools-btn.open .chevron {
+    transform: rotate(180deg);
+  }
+
+  .tools-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    z-index: 50;
+    background: var(--search-bg);
+    border: 1px solid var(--search-border);
+    border-radius: 1rem;
+    padding: 1rem;
+    min-width: 320px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+  .tools-dropdown.open {
+    display: block;
+  }
+
+  .tools-section {
+    margin-bottom: 0.75rem;
+  }
+  .tools-section:last-child {
+    margin-bottom: 0;
+  }
+  .tools-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .tools-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .tools-chip {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-color);
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    text-decoration: none;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .tools-chip:hover {
+    background: var(--button-hover);
+    border-color: var(--link-color);
+    color: var(--link-color);
+  }
+  .tools-chip.active {
+    background: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+  }
+  .tools-divider {
+    height: 1px;
+    background: var(--button-border);
+    margin: 0.75rem 0;
   }
 
   .pagination-btn {
@@ -226,3 +434,24 @@ const paginationRange = getPaginationRange(currentPage, totalPages);
     pointer-events: none;
   }
 </style>
+
+<script is:inline>
+(function() {
+  const toggle = document.getElementById('tools-toggle');
+  const dropdown = document.getElementById('tools-dropdown');
+  if (!toggle || !dropdown) return;
+
+  toggle.addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggle.classList.toggle('open');
+    dropdown.classList.toggle('open');
+  });
+
+  document.addEventListener('click', function(e) {
+    if (!dropdown.contains(e.target) && e.target !== toggle) {
+      toggle.classList.remove('open');
+      dropdown.classList.remove('open');
+    }
+  });
+})();
+</script>

@@ -1,0 +1,177 @@
+---
+import type { SearchResult } from '../lib/search';
+
+export interface Props {
+  items: SearchResult[];
+}
+
+const { items } = Astro.props;
+
+function relativeTime(isoDate: string | undefined): string | null {
+  if (!isoDate) return null;
+  const date = new Date(isoDate);
+  if (isNaN(date.getTime())) return null;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return 'Hace un momento';
+  if (diffMin === 1) return 'Hace 1 minuto';
+  if (diffMin < 60) return `Hace ${diffMin} minutos`;
+  if (diffHour === 1) return 'Hace 1 hora';
+  if (diffHour < 24) return `Hace ${diffHour} horas`;
+  if (diffDay === 1) return 'Hace 1 día';
+  if (diffDay <= 7) return `Hace ${diffDay} días`;
+
+  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const y = date.getFullYear();
+  return `${d}-${m}-${y}`;
+}
+---
+
+{items.length > 0 && (
+  <div class="news-card">
+    <div class="news-header">
+      <svg class="w-5 h-5 text-[var(--link-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+      </svg>
+      <span class="news-title">Noticias</span>
+    </div>
+    <div class="news-list">
+      {items.map((item) => {
+        const timeAgo = relativeTime(item.meta.publishedAt);
+        return (
+          <a href={item.url} target="_blank" rel="noopener noreferrer" class="news-item">
+            <div class="news-thumb">
+              <img src={item.meta.schemaImage} alt="" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('news-thumb-fallback');" />
+            </div>
+            <div class="news-body">
+              <span class="news-item-title">{item.title}</span>
+              <div class="news-meta">
+                {item.meta.schemaAuthor && (
+                  <span class="news-author">{item.meta.schemaAuthor}</span>
+                )}
+                {timeAgo && (
+                  <span class="news-date">{timeAgo}</span>
+                )}
+              </div>
+            </div>
+          </a>
+        );
+      })}
+    </div>
+  </div>
+)}
+
+<style>
+  .news-card {
+    background: var(--card-bg);
+    border: 1px solid var(--search-border);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--search-shadow);
+    transition: all 0.3s ease;
+  }
+  .news-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+  }
+  .news-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--button-border);
+  }
+  .news-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-color);
+  }
+  .news-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+  }
+  .news-item {
+    display: flex;
+    gap: 0.75rem;
+    text-decoration: none;
+    border-radius: 0.75rem;
+    padding: 0.4rem;
+    margin: -0.4rem;
+    transition: background 0.15s;
+  }
+  .news-item:hover {
+    background: var(--button-border);
+  }
+  .news-thumb {
+    width: 80px;
+    height: 60px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: var(--button-bg);
+    flex-shrink: 0;
+  }
+  .news-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .news-thumb-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .news-thumb-fallback::after {
+    content: '📰';
+    font-size: 1.2rem;
+  }
+  .news-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+  .news-item-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--link-color);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .news-item:hover .news-item-title {
+    text-decoration: underline;
+  }
+  .news-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.25rem;
+    flex-wrap: wrap;
+  }
+  .news-author {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .news-date {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    opacity: 0.8;
+  }
+  .news-date::before {
+    content: '•';
+    margin-right: 0.35rem;
+    opacity: 0.5;
+  }
+</style>

@@ -20,7 +20,13 @@ interface CrawlerSearchResult {
   language: string;
   region: string;
   crawled_at: string;
+  updated_at?: string;
+  published_at?: string;
   rank: number;
+  schema_type?: string;
+  schema_image?: string;
+  schema_author?: string;
+  schema_keywords?: string;
 }
 
 /** Raw image search result from the Duvycrawl API. */
@@ -51,6 +57,34 @@ interface CrawlerSearchResponse {
   page: number;
   limit: number;
   results: CrawlerSearchResult[];
+}
+
+/** Extra metadata returned alongside search results. */
+export interface CrawlerSearchMeta {
+  domain: string;
+  language: string;
+  region: string;
+  crawledAt: string;
+  updatedAt?: string;
+  publishedAt?: string;
+  schemaType?: string;
+  schemaImage?: string;
+  schemaAuthor?: string;
+  schemaKeywords?: string;
+}
+
+/** Filters supported by the crawler search endpoint. */
+export interface CrawlerFilters {
+  domain?: string;
+  lang?: string;
+  after?: string;   // ISO date, e.g. 2024-01-01
+  before?: string;  // ISO date, e.g. 2024-12-31
+  region?: string;
+}
+
+/** Extended result shape that includes crawler metadata. */
+export interface CrawlerSearchResultItem extends SearchResultItem {
+  meta: CrawlerSearchMeta;
 }
 
 /**
@@ -122,21 +156,45 @@ export async function requestCrawl(urls: string[], force: boolean = false): Prom
 }
 
 /**
+ * Build query-string parameters for crawler search including optional filters.
+ */
+function buildSearchUrl(
+  query: string,
+  limit: number,
+  page: number,
+  filters: CrawlerFilters = {}
+): string {
+  const params = new URLSearchParams();
+  params.set('q', query);
+  params.set('limit', String(limit));
+  params.set('page', String(page));
+
+  if (filters.domain) params.set('domain', filters.domain);
+  if (filters.lang) params.set('lang', filters.lang);
+  if (filters.after) params.set('after', filters.after);
+  if (filters.before) params.set('before', filters.before);
+  if (filters.region) params.set('region', filters.region);
+
+  return `${CRAWLER_API}/search?${params.toString()}`;
+}
+
+/**
  * Search the local Duvycrawl index, returning both results and total count.
- * Used by the search orchestrator for pagination support.
+ * Supports optional filters (domain, date range, language, region).
  */
 export async function searchCrawlerFull(
   query: string,
   limit: number = 10,
-  page: number = 1
-): Promise<{ results: SearchResultItem[]; total: number }> {
+  page: number = 1,
+  filters: CrawlerFilters = {}
+): Promise<{ results: CrawlerSearchResultItem[]; total: number }> {
   if (!query || query.trim() === '') return { results: [], total: 0 };
 
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CRAWLER_TIMEOUT_MS);
 
-    const url = `${CRAWLER_API}/search?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}&lang=es`;
+    const url = buildSearchUrl(query, limit, page, filters);
     const response = await fetch(url, { signal: controller.signal });
 
     clearTimeout(timeoutId);
@@ -152,6 +210,18 @@ export async function searchCrawlerFull(
       title: r.title || r.domain,
       url: r.url,
       content: r.snippet || r.description || '',
+      meta: {
+        domain: r.domain,
+        language: r.language,
+        region: r.region,
+        crawledAt: r.crawled_at,
+        updatedAt: r.updated_at,
+        publishedAt: r.published_at,
+        schemaType: r.schema_type,
+        schemaImage: r.schema_image,
+        schemaAuthor: r.schema_author,
+        schemaKeywords: r.schema_keywords,
+      },
     }));
 
     return { results, total: data.total || 0 };

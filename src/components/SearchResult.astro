@@ -1,11 +1,23 @@
 ---
 import type { SearchResult } from '../lib/search';
+import type { SearchResultItem } from '../lib/duckduckgo';
+import Favicon from './Favicon.astro';
+import Sitelinks from './Sitelinks.astro';
 
 export interface Props {
   result: SearchResult;
+  sitelinks?: SearchResultItem[];
 }
 
-const { result } = Astro.props;
+const { result, sitelinks = [] } = Astro.props;
+
+const domain = (() => {
+  try {
+    return new URL(result.url).hostname;
+  } catch {
+    return '';
+  }
+})();
 
 // Helper to format URL for display
 const displayUrl = (() => {
@@ -17,14 +29,103 @@ const displayUrl = (() => {
   }
 })();
 
+// Extract a human-friendly site name from domain + title
+function getSiteName(domain: string, title: string): string {
+  const known: Record<string, string> = {
+    'wikipedia.org': 'Wikipedia',
+    'es.wikipedia.org': 'Wikipedia',
+    'en.wikipedia.org': 'Wikipedia',
+    'github.com': 'GitHub',
+    'stackoverflow.com': 'Stack Overflow',
+    'youtube.com': 'YouTube',
+    'reddit.com': 'Reddit',
+    'infobae.com': 'Infobae',
+    'elobservador.com.uy': 'El Observador',
+    'telenoche.com.uy': 'Telenoche',
+    'xataka.com': 'Xataka',
+  };
+
+  // Direct match on full domain
+  if (known[domain]) return known[domain];
+
+  // Try to extract from title using common separators.
+  // Prefer the shortest part — usually the site name, not the slogan.
+  const separators = [' | ', ' - ', ' — ', ' · ', ' › ', ' : ', ' « ', ' » '];
+  for (const sep of separators) {
+    const parts = title.split(sep);
+    if (parts.length > 1) {
+      const candidates = parts
+        .map((p) => p.trim())
+        .filter((p) => p.length > 1 && p.length < 60);
+      if (candidates.length > 0) {
+        // Pick the shortest candidate (site names are short, slogans are long)
+        const shortest = candidates.reduce((a, b) =>
+          a.length < b.length ? a : b
+        );
+        return shortest;
+      }
+    }
+  }
+
+  // Fallback: clean domain name — strip common TLDs then split on dots
+  const clean = domain
+    .replace(/^www\./, '')
+    // Remove common two-level TLDs first (e.g. .com.uy, .co.uk)
+    .replace(/\.com\.[a-z]{2}$/i, '')
+    .replace(/\.co\.[a-z]{2}$/i, '')
+    .replace(/\.org\.[a-z]{2}$/i, '')
+    .replace(/\.net\.[a-z]{2}$/i, '')
+    // Remove common single TLDs
+    .replace(/\.(com|org|net|edu|gov|io|es|fr|de|it|pt|ar|mx|us|uk|info|app|dev|tech|blog|news)$/i, '')
+    .replace(/\./g, ' ');
+
+  // Split into words and capitalise each
+  return clean
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+}
+
+const siteName = getSiteName(domain, result.title);
+
+// Relative time helper
+function relativeTime(isoDate: string | undefined): string | null {
+  if (!isoDate) return null;
+  const date = new Date(isoDate);
+  if (isNaN(date.getTime())) return null;
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return 'Hace un momento';
+  if (diffMin === 1) return 'Hace 1 minuto';
+  if (diffMin < 60) return `Hace ${diffMin} minutos`;
+  if (diffHour === 1) return 'Hace 1 hora';
+  if (diffHour < 24) return `Hace ${diffHour} horas`;
+  if (diffDay === 1) return 'Hace 1 día';
+  if (diffDay <= 7) return `Hace ${diffDay} días`;
+
+  // Over 7 days — show absolute date DD-MM-YYYY
+  const d = String(date.getDate()).padStart(2, '0');
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const y = date.getFullYear();
+  return `${d}-${m}-${y}`;
+}
+
+const timeAgo = relativeTime(result.meta?.publishedAt);
 ---
 
 <div class="mb-6 max-w-[700px] w-full">
   <div class="group flex flex-col p-4 rounded-2xl bg-[var(--card-bg)] backdrop-blur-sm border border-transparent hover:border-[var(--search-border)] hover:bg-[var(--card-hover)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer" onclick={`window.open('${result.url}', '_blank')`}>
     <a href={result.url} target="_blank" rel="noopener noreferrer" class="block mb-2" onclick="event.stopPropagation();">
-      <div class="flex items-center space-x-3 mb-2">
+      <span class="site-name">{siteName}</span>
+      <div class="flex items-center space-x-3 mb-2 mt-1">
         <div class="w-7 h-7 rounded-full bg-[var(--button-bg)] flex items-center justify-center shadow-sm">
-          <img src={`https://www.google.com/s2/favicons?domain=${new URL(result.url).hostname}&sz=32`} alt="favicon" class="w-4 h-4 rounded-sm object-contain" onerror="this.style.display='none'" />
+          <Favicon domain={domain} size={32} class="w-4 h-4 rounded-sm" />
         </div>
         <div class="flex flex-col">
           <span class="text-xs text-[var(--text-muted)] truncate max-w-[250px] sm:max-w-[400px] font-medium">{displayUrl}</span>
@@ -34,9 +135,22 @@ const displayUrl = (() => {
         {result.title}
       </h3>
     </a>
+    {timeAgo && (
+      <span class="text-[12px] text-[var(--text-muted)] font-medium mb-1">{timeAgo}</span>
+    )}
     <p class="result-content text-[15px] text-[var(--text-color)] leading-relaxed line-clamp-3 opacity-90 font-light" set:html={result.content}></p>
+    <Sitelinks links={sitelinks} />
   </div>
 </div>
+
+<style>
+  .site-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.2;
+  }
+</style>
 
 <style is:global>
   /* Force search highlight to be bold only — no yellow background */

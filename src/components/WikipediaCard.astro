@@ -1,0 +1,129 @@
+---
+import type { SearchResult } from '../lib/search';
+import Favicon from './Favicon.astro';
+
+export interface Props {
+  result: SearchResult;
+}
+
+const { result } = Astro.props;
+
+const displayUrl = (() => {
+  try {
+    const urlObj = new URL(result.url);
+    return `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname !== '/' ? urlObj.pathname : ''}`;
+  } catch(e) {
+    return result.url;
+  }
+})();
+
+const domain = (() => {
+  try {
+    return new URL(result.url).hostname;
+  } catch {
+    return 'wikipedia.org';
+  }
+})();
+---
+
+<div class="wiki-card">
+  <div class="wiki-header">
+    <div class="wiki-icon">
+      <Favicon domain={domain} size={64} class="w-10 h-10 rounded-lg" />
+    </div>
+    <div class="wiki-title-wrap">
+      <h3 class="wiki-title">{result.title}</h3>
+      <span class="wiki-domain">{displayUrl}</span>
+    </div>
+  </div>
+  <p class="wiki-content" set:html={result.content}></p>
+  <a href={result.url} target="_blank" rel="noopener noreferrer" class="wiki-link">
+    Leer más en Wikipedia
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  </a>
+</div>
+
+<style>
+  .wiki-card {
+    background: var(--card-bg);
+    border: 1px solid var(--search-border);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--search-shadow);
+    transition: all 0.3s ease;
+  }
+  .wiki-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border-color: var(--link-color);
+  }
+  .wiki-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .wiki-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.5rem;
+    background: var(--button-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .wiki-title-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .wiki-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .wiki-domain {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .wiki-content {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    line-height: 1.6;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .wiki-content :global(b),
+  .wiki-content :global(strong),
+  .wiki-content :global(mark) {
+    background: transparent !important;
+    color: inherit !important;
+    font-weight: 600 !important;
+  }
+  .wiki-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--link-color);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .wiki-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+  }
+</style>

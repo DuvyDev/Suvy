@@ -1,0 +1,73 @@
+---
+import type { SearchResultItem } from '../lib/duckduckgo';
+
+export interface Props {
+  links: SearchResultItem[];
+}
+
+const { links } = Astro.props;
+---
+
+{links.length > 0 && (
+  <div class="sitelinks">
+    {links.map((link) => (
+      <a href={link.url} target="_blank" rel="noopener noreferrer" class="sitelink" title={link.content}>
+        <span class="sitelink-title">{link.title}</span>
+        <span class="sitelink-url">{(() => {
+          try {
+            const u = new URL(link.url);
+            return u.pathname !== '/' ? u.pathname : u.hostname;
+          } catch {
+            return link.url;
+          }
+        })()}</span>
+      </a>
+    ))}
+  </div>
+)}
+
+<style>
+  .sitelinks {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem 1rem;
+    margin-top: 0.6rem;
+    padding-left: 0.25rem;
+  }
+  @media (max-width: 640px) {
+    .sitelinks {
+      grid-template-columns: 1fr;
+    }
+  }
+  .sitelink {
+    display: flex;
+    flex-direction: column;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: background 0.15s;
+    min-width: 0;
+  }
+  .sitelink:hover {
+    background: var(--button-border);
+  }
+  .sitelink-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--link-color);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sitelink:hover .sitelink-title {
+    text-decoration: underline;
+  }
+  .sitelink-url {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+</style>
