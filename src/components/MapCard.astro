@@ -1,0 +1,215 @@
+---
+import type { MapResult } from '../lib/search';
+
+export interface Props {
+  result: MapResult;
+}
+
+const { result } = Astro.props;
+
+const maptilerEnabled = process.env.MAP_TILER_ENABLED !== 'false';
+const maptilerApiKey = process.env.MAP_TILER_API_KEY || '';
+const useInteractiveMap = maptilerEnabled && maptilerApiKey.length > 0;
+
+const latDir = result.lat >= 0 ? 'N' : 'S';
+const lonDir = result.lon >= 0 ? 'E' : 'W';
+const latFormatted = `${Math.abs(result.lat).toFixed(4)}° ${latDir}`;
+const lonFormatted = `${Math.abs(result.lon).toFixed(4)}° ${lonDir}`;
+---
+
+<div class="map-card">
+  <div class="map-header">
+    <svg class="map-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+    <div class="map-title-wrap">
+      <h3 class="map-title">{result.name}</h3>
+      <span class="map-type">{result.type}</span>
+    </div>
+  </div>
+
+  {useInteractiveMap ? (
+    <div class="map-preview-container" id={`map-${result.lat}-${result.lon}`} data-lat={result.lat} data-lon={result.lon} data-name={result.name} data-apikey={maptilerApiKey}></div>
+  ) : (
+    <div class="map-preview-container">
+      <a href={result.osmLink} target="_blank" rel="noopener noreferrer" class="map-preview-link">
+        <svg class="map-fallback-pin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        <span class="map-fallback-label">{latFormatted}, {lonFormatted}</span>
+        <span class="map-preview-hint">Click to view map</span>
+      </a>
+    </div>
+  )}
+
+  <div class="map-coords">
+    <span>{latFormatted}</span>
+    <span class="map-coords-sep">·</span>
+    <span>{lonFormatted}</span>
+  </div>
+
+  <a href={result.osmLink} target="_blank" rel="noopener noreferrer" class="map-link">
+    Ver en OpenStreetMap
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+    </svg>
+  </a>
+
+  <span class="map-attribution">&copy; OpenStreetMap contributors &copy; MapTiler</span>
+</div>
+
+{useInteractiveMap && (
+  <>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script is:inline>
+      (function() {
+        var containers = document.querySelectorAll('[id^="map-"]');
+        containers.forEach(function(container) {
+          try {
+            var lat = parseFloat(container.dataset.lat);
+            var lon = parseFloat(container.dataset.lon);
+            var name = container.dataset.name;
+            var apiKey = container.dataset.apikey;
+
+            if (isNaN(lat) || isNaN(lon)) return;
+
+            if (window.L) {
+              var map = window.L.map(container.id, { center: [lat, lon], zoom: 13, zoomControl: false });
+              window.L.tileLayer(
+                'https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=' + apiKey,
+                { tileSize: 512, zoomOffset: -1, attribution: '&copy; OpenStreetMap &copy; MapTiler' }
+              ).addTo(map);
+              window.L.marker([lat, lon]).addTo(map).bindPopup(name).openPopup();
+            }
+          } catch(e) {
+            container.innerHTML = '<div class="map-error"><svg class="map-fallback-pin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span class="map-error-text">Map unavailable</span></div>';
+          }
+        });
+      })();
+    </script>
+  </>
+)}
+
+<style>
+  .map-card {
+    background: var(--card-bg);
+    border: 1px solid var(--search-border);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    backdrop-filter: blur(12px);
+    box-shadow: var(--search-shadow);
+    transition: all 0.3s ease;
+  }
+  .map-card:hover {
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    border-color: var(--link-color);
+  }
+  .map-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .map-icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--link-color);
+    flex-shrink: 0;
+  }
+  .map-title-wrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .map-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-color);
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .map-type {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: capitalize;
+  }
+  .map-preview-container {
+    border-radius: 0.75rem;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    background: var(--button-bg);
+    position: relative;
+  }
+  .map-preview-container.leaflet-container {
+    width: 100%;
+    height: 200px;
+    border-radius: 0.75rem;
+    z-index: 1;
+  }
+  .map-preview-container.leaflet-container a {
+    outline: none;
+  }
+  .map-preview-container.leaflet-container .leaflet-control-attribution {
+    background: rgba(255,255,255,0.8);
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  .map-preview-container.leaflet-container .leaflet-popup-content-wrapper {
+    border-radius: 4px;
+    padding: 4px 8px;
+  }
+  .map-error {
+    width: 100%;
+    height: 200px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    background: var(--button-bg);
+  }
+  .map-error-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .map-coords {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: monospace;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .map-coords-sep {
+    opacity: 0.4;
+  }
+  .map-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--link-color);
+    text-decoration: none;
+    transition: opacity 0.2s;
+  }
+  .map-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+  }
+  .map-attribution {
+    display: block;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-top: 0.6rem;
+  }
+</style>

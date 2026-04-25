@@ -3,9 +3,19 @@ import { requestCrawl, searchCrawlerFull, type CrawlerFilters, type CrawlerSearc
 import { searchDuckDuckGo } from './duckduckgo';
 import { shouldQueryDDG, markQueried } from './ddg-cache';
 import { searchAndGetFirstSummary, WikipediaResult } from './wikipedia';
+import { isGeoQuery } from './geodetect';
+import { geocode, type NominatimResult } from './nominatim';
 
 export interface SearchResult extends CrawlerSearchResultItem {
   source: 'local' | 'duckduckgo';
+}
+
+export interface MapResult {
+  name: string;
+  type: string;
+  lat: number;
+  lon: number;
+  osmLink: string;
 }
 
 export interface SearchResponse {
@@ -18,6 +28,7 @@ export interface SearchResponse {
   wikipediaResult?: SearchResult | WikipediaResult;
   sitelinks: SearchResultItem[];
   newsResults: SearchResult[];
+  mapResult?: MapResult;
 }
 
 export interface SearchOptions {
@@ -88,6 +99,7 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
   const newsMax = parseInt(process.env.NEWS_MAX_ITEMS || '5', 10);
   const wikiEnabled = process.env.WIKIPEDIA_CARD_ENABLED !== 'false';
   const wikiUseApi = process.env.WIKIPEDIA_USE_API !== 'false';
+  const mapEnabled = process.env.MAP_CARD_ENABLED !== 'false';
 
   // Get Wikipedia result: prefer REST API, fallback to crawler.
   let wikipediaResult: SearchResult | WikipediaResult | undefined;
@@ -109,6 +121,30 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
       if (wikiIndex >= 0) {
         wikipediaResult = localResults[wikiIndex];
         localResults = localResults.filter((_, i) => i !== wikiIndex);
+      }
+    }
+  }
+
+  // Resolve map result via cascade: Wikipedia coordinates → heurística → Nominatim.
+  let mapResult: MapResult | undefined;
+  if (mapEnabled) {
+    const wikiCoords = (wikipediaResult as WikipediaResult | undefined)?.coordinates;
+    if (wikiCoords) {
+      mapResult = {
+        name: wikipediaResult?.title || query,
+        type: (wikipediaResult as WikipediaResult).description || 'place',
+        lat: wikiCoords.lat,
+        lon: wikiCoords.lon,
+        osmLink: `https://www.openstreetmap.org/?mlat=${wikiCoords.lat}&mlon=${wikiCoords.lon}#map=14/${wikiCoords.lat}/${wikiCoords.lon}`,
+      };
+    } else if (isGeoQuery(query)) {
+      try {
+        const geo = await geocode(query, filters.lang || 'es');
+        if (geo) {
+          mapResult = geo;
+        }
+      } catch {
+        // Silently ignore Nominatim failures — map card is non-critical.
       }
     }
   }
@@ -175,6 +211,7 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
     wikipediaResult,
     sitelinks,
     newsResults,
+    mapResult,
   };
 }
 

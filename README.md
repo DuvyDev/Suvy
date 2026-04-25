@@ -10,6 +10,7 @@
 - **Personal crawler integration**: Searches your own DuvyCrawl index first.
 - **Smart fallback**: Automatically queries DuckDuckGo to fill gaps and feeds those URLs back into your crawler for future indexing.
 - **Rich result cards**: Site names, favicons, relative dates, sitelinks, and Wikipedia knowledge panels.
+- **Map card**: Interactive map with MapTiler + Leaflet, or pin fallback with coordinates.
 - **News sidebar**: Articles with rich schema (images, authors, publication dates) displayed in a dedicated panel.
 - **Advanced filters**: Date range, language, and `site:` operator support.
 - **Manual URL submission**: Easily queue new URLs for your crawler to index.
@@ -137,6 +138,10 @@ Copy `.env.example` to `.env` and adjust values:
 | `DDG_CACHE_TTL_MINUTES` | `120` | How long to cache DDG query results |
 | `NEWS_MAX_ITEMS` | `5` | Max news items in sidebar |
 | `WIKIPEDIA_CARD_ENABLED` | `true` | Show Wikipedia knowledge panel |
+| `MAP_CARD_ENABLED` | `true` | Show map card for geographic queries |
+| `MAP_TILER_ENABLED` | `true` | Use interactive map (requires API key) |
+| `MAP_TILER_API_KEY` | — | MapTiler API key (get free at maptiler.com, 100k/mo) |
+| `NOMINATIM_CACHE_TTL_DAYS` | `30` | Cache TTL for Nominatim geocoding |
 | `RESULTS_PER_PAGE` | `10` | Pagination page size |
 | `DEFAULT_LANG` | `en` | Default UI language (`en` or `es`) |
 | `TUNNEL_TOKEN` | — | Cloudflare Tunnel token (Docker Kit only) |

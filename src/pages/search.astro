@@ -4,6 +4,7 @@ import SearchBar from '../components/SearchBar.astro';
 import SearchResult from '../components/SearchResult.astro';
 import WikipediaCard from '../components/WikipediaCard.astro';
 import NewsCard from '../components/NewsCard.astro';
+import MapCard from '../components/MapCard.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import LanguageToggle from '../components/LanguageToggle.astro';
 import { search, type SearchOptions } from '../lib/search';
@@ -37,7 +38,7 @@ if (q) {
   results = await search(q, searchOptions);
 }
 
-const { results: items, localCount, hasMore, totalLocal, wikipediaResult, sitelinks, newsResults } = results;
+const { results: items, localCount, hasMore, totalLocal, wikipediaResult, sitelinks, newsResults, mapResult } = results;
 const totalPages = Math.max(1, Math.ceil(totalLocal / 10));
 
 function getPaginationRange(current: number, total: number): (number | '...')[] {
@@ -204,7 +205,7 @@ const activeAfter = truncMin(afterParam);
         </ul>
       </div>
     ) : (
-      <div class:list={['results-layout', { 'has-sidebar': !!(wikipediaResult || newsResults.length) }]}>
+      <div class:list={['results-layout', { 'has-sidebar': !!(wikipediaResult || newsResults.length || mapResult) }]}>
         <div class="results-main">
           <div class="flex flex-col gap-2">
             {items.map((result, i) => (
@@ -258,12 +259,13 @@ const activeAfter = truncMin(afterParam);
           )}
         </div>
 
-        {(wikipediaResult || newsResults.length > 0) && (
-          <aside class="results-sidebar">
-            {wikipediaResult && <WikipediaCard result={wikipediaResult} />}
-            {newsResults.length > 0 && <NewsCard items={newsResults} />}
-          </aside>
-        )}
+  {(wikipediaResult || newsResults.length > 0 || mapResult) && (
+    <aside class="results-sidebar">
+      {wikipediaResult && <WikipediaCard result={wikipediaResult} />}
+      {mapResult && <MapCard result={mapResult} />}
+      {newsResults.length > 0 && <NewsCard items={newsResults} />}
+    </aside>
+  )}
       </div>
     )}
   </main>

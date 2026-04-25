@@ -68,6 +68,7 @@ export interface WikipediaResult extends SearchResultItem {
   pageId: number;
   description?: string;
   thumbnail?: WikipediaImage;
+  coordinates?: { lat: number; lon: number };
 }
 
 async function fetchWithTimeout(
@@ -199,18 +200,29 @@ export async function getWikipediaSummary(
 ): Promise<WikipediaResult | undefined> {
   if (!title || title.trim() === '') return undefined;
 
-  const targetTitle = title.trim().replace(/ /g, '_');
-  const languageCode = getLanguageCode(language);
-  const url = `https://${languageCode}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(targetTitle)}`;
+  const languagesToTry = [language, 'en'];
+  let lastError: string = 'Unknown error';
 
-  const result = await fetchWithRetry<WikipediaSummary>(url);
+  for (const lang of languagesToTry) {
+    const targetTitle = title.trim().replace(/ /g, '_');
+    const languageCode = getLanguageCode(lang);
+    const url = `https://${languageCode}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(targetTitle)}`;
 
-  if (result.error || !result.data) {
-    console.warn(`[wikipedia] Summary failed for "${title}": ${result.error}`);
-    return undefined;
+    const result = await fetchWithRetry<WikipediaSummary>(url);
+
+    if (result.error || !result.data) {
+      lastError = result.error || 'No data';
+      if (result.status === 404 && lang !== languagesToTry[languagesToTry.length - 1]) {
+        continue;
+      }
+      console.warn(`[wikipedia] Summary failed for "${title}": ${lastError}`);
+      return undefined;
+    }
+
+    return mapSummaryToResult(result.data, languageCode);
   }
 
-  return mapSummaryToResult(result.data, languageCode);
+  return undefined;
 }
 
 export async function searchAndGetFirstSummary(
@@ -223,7 +235,8 @@ export async function searchAndGetFirstSummary(
 
   if (searchResults.length === 0) return undefined;
 
-  const firstTitle = searchResults[0].url.split('/').pop()?.replace(/_/g, ' ') || searchResults[0].title;
+  const rawTitle = searchResults[0].url.split('/').pop() || '';
+  const firstTitle = decodeURIComponent(rawTitle).replace(/_/g, ' ');
 
   return getWikipediaSummary(firstTitle, language);
 }
@@ -279,11 +292,12 @@ function mapSummaryToResult(summary: WikipediaSummary, language: string): Wikipe
           height: summary.thumbnail.height,
         }
       : summary.originalimage
-      ? {
-          url: summary.originalimage.source,
-          width: summary.originalimage.width,
-          height: summary.originalimage.height,
-        }
-      : undefined,
+        ? {
+            url: summary.originalimage.source,
+            width: summary.originalimage.width,
+            height: summary.originalimage.height,
+          }
+        : undefined,
+    coordinates: summary.coordinates || undefined,
   };
 }
