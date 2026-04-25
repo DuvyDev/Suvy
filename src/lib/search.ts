@@ -2,6 +2,7 @@ import type { SearchResultItem } from './duckduckgo';
 import { requestCrawl, searchCrawlerFull, type CrawlerFilters, type CrawlerSearchResultItem } from './duvycrawl';
 import { searchDuckDuckGo } from './duckduckgo';
 import { shouldQueryDDG, markQueried } from './ddg-cache';
+import { searchAndGetFirstSummary, WikipediaResult } from './wikipedia';
 
 export interface SearchResult extends CrawlerSearchResultItem {
   source: 'local' | 'duckduckgo';
@@ -14,7 +15,7 @@ export interface SearchResponse {
   page: number;
   totalLocal: number;
   hasMore: boolean;
-  wikipediaResult?: SearchResult;
+  wikipediaResult?: SearchResult | WikipediaResult;
   sitelinks: SearchResultItem[];
   newsResults: SearchResult[];
 }
@@ -86,16 +87,29 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
 
   const newsMax = parseInt(process.env.NEWS_MAX_ITEMS || '5', 10);
   const wikiEnabled = process.env.WIKIPEDIA_CARD_ENABLED !== 'false';
+  const wikiUseApi = process.env.WIKIPEDIA_USE_API !== 'false';
 
-  // Extract Wikipedia result if present and enabled.
-  let wikipediaResult: SearchResult | undefined;
+  // Get Wikipedia result: prefer REST API, fallback to crawler.
+  let wikipediaResult: SearchResult | WikipediaResult | undefined;
   if (wikiEnabled) {
-    const wikiIndex = localResults.findIndex(
-      (r) => r.meta.domain === 'wikipedia.org' || r.meta.domain.endsWith('.wikipedia.org')
-    );
-    if (wikiIndex >= 0) {
-      wikipediaResult = localResults[wikiIndex];
-      localResults = localResults.filter((_, i) => i !== wikiIndex);
+    if (wikiUseApi) {
+      try {
+        const wikiApiResult = await searchAndGetFirstSummary(query, filters.lang || 'es');
+        if (wikiApiResult) {
+          wikipediaResult = wikiApiResult;
+        }
+      } catch {
+        wikipediaResult = undefined;
+      }
+    }
+    if (!wikipediaResult) {
+      const wikiIndex = localResults.findIndex(
+        (r) => r.meta.domain === 'wikipedia.org' || r.meta.domain.endsWith('.wikipedia.org')
+      );
+      if (wikiIndex >= 0) {
+        wikipediaResult = localResults[wikiIndex];
+        localResults = localResults.filter((_, i) => i !== wikiIndex);
+      }
     }
   }
 

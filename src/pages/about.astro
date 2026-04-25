@@ -17,15 +17,10 @@ const metaDesc = langCookie === 'es'
     <h1 class="text-4xl font-extrabold text-[var(--text-color)] mb-6">{t.about} Suvy</h1>
     
     <div class="prose prose-lg text-[var(--text-color)] space-y-6">
-      <p>
-        <strong>Suvy</strong> {langCookie === 'es'
-          ? 'es un buscador personal y privado diseñado para quienes valoran el control sobre su experiencia de búsqueda. En lugar de depender exclusivamente de motores de búsqueda de terceros, Suvy aprovecha tu propio índice local mediante'
-          : 'is a personal and private search engine designed for those who value control over their search experience. Instead of relying solely on third-party search engines, Suvy leverages your own local index through'
-        } <a href="https://github.com/DuvyDev/DuvyCrawl" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">DuvyCrawl</a>{langCookie === 'es'
-          ? ', complementándolo inteligentemente con resultados de DuckDuckGo cuando es necesario.'
-          : ', intelligently supplementing it with DuckDuckGo results when needed.'
-        }
-      </p>
+      <p set:html={langCookie === 'es'
+        ? '<strong>Suvy</strong> es un buscador personal y privado diseñado para quienes valoran el control sobre su experiencia de búsqueda. En lugar de depender exclusivamente de motores de búsqueda de terceros, Suvy aprovecha tu propio índice local mediante <a href="https://github.com/DuvyDev/DuvyCrawl" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">DuvyCrawl</a>, complementándolo inteligentemente con resultados de DuckDuckGo cuando es necesario.'
+        : '<strong>Suvy</strong> is a personal and private search engine designed for those who value control over their search experience. Instead of relying solely on third-party search engines, Suvy leverages your own local index through <a href="https://github.com/DuvyDev/DuvyCrawl" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">DuvyCrawl</a>, intelligently supplementing it with DuckDuckGo results when needed.'
+      } />
       
       <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? 'Filosofía' : 'Philosophy'}</h2>
       <p>
@@ -37,30 +32,23 @@ const metaDesc = langCookie === 'es'
       
       <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? 'Cómo funciona' : 'How it works'}</h2>
       <ul class="list-disc pl-6 space-y-2">
-        <li>{langCookie === 'es' ? '<strong>Índice local primero:</strong> Cada búsqueda consulta primero tu crawler personal (DuvyCrawl).' : '<strong>Local index first:</strong> Every search queries your personal crawler (DuvyCrawl) first.'}</li>
-        <li>{langCookie === 'es' ? '<strong>Fallback inteligente:</strong> Si no hay suficientes resultados locales, Suvy consulta DuckDuckGo en segundo plano.' : '<strong>Smart fallback:</strong> If there are not enough local results, Suvy queries DuckDuckGo in the background.'}</li>
-        <li>{langCookie === 'es' ? '<strong>Alimentación continua:</strong> Las URLs descubiertas mediante DuckDuckGo se encolan automáticamente en tu crawler para futuras búsquedas.' : '<strong>Continuous feeding:</strong> URLs discovered via DuckDuckGo are automatically queued in your crawler for future searches.'}</li>
-        <li>{langCookie === 'es' ? '<strong>Resultados enriquecidos:</strong> Sitelinks, tarjetas de Wikipedia, noticias con imágenes y filtros avanzados.' : '<strong>Rich results:</strong> Sitelinks, Wikipedia cards, news with images, and advanced filters.'}</li>
+        <li set:html={langCookie === 'es' ? '<strong>Índice local primero:</strong> Cada búsqueda consulta primero tu crawler personal (DuvyCrawl).' : '<strong>Local index first:</strong> Every search queries your personal crawler (DuvyCrawl) first.'}></li>
+        <li set:html={langCookie === 'es' ? '<strong>Fallback inteligente:</strong> Si no hay suficientes resultados locales, Suvy consulta DuckDuckGo en segundo plano.' : '<strong>Smart fallback:</strong> If there are not enough local results, Suvy queries DuckDuckGo in the background.'}></li>
+        <li set:html={langCookie === 'es' ? '<strong>Alimentación continua:</strong> Las URLs descubiertas mediante DuckDuckGo se encolan automáticamente en tu crawler para futuras búsquedas.' : '<strong>Continuous feeding:</strong> URLs discovered via DuckDuckGo are automatically queued in your crawler for future searches.'}></li>
+        <li set:html={langCookie === 'es' ? '<strong>Resultados enriquecidos:</strong> Sitelinks, tarjetas de Wikipedia, noticias con imágenes y filtros avanzados.' : '<strong>Rich results:</strong> Sitelinks, Wikipedia cards, news with images, and advanced filters.'}></li>
       </ul>
       
       <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? 'Tecnología' : 'Technology'}</h2>
-      <p>
-        {langCookie === 'es'
-          ? 'Suvy está construido con'
-          : 'Suvy is built with'
-        } <a href="https://astro.build" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">Astro</a> {langCookie === 'es' ? 'y' : 'and'} <a href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">Tailwind CSS</a>{langCookie === 'es'
-          ? '. El crawler companion'
-          : '. The companion crawler'
-        } <a href="https://github.com/DuvyDev/DuvyCrawl" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">DuvyCrawl</a> {langCookie === 'es'
-          ? 'utiliza Go, SQLite (FTS5) y un sistema de scraping distribuido.'
-          : 'uses Go, SQLite (FTS5), and a distributed scraping system.'
-        }
-      </p>
+      <p set:html={langCookie === 'es'
+        ? 'Suvy está construido con <a href="https://astro.build" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">Astro</a> y <a href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">Tailwind CSS</a>. El crawler companion <a href="https://github.com/DuvyDev/DuvyCrawl" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">DuvyCrawl</a> utiliza Go, SQLite (FTS5) y un sistema de scraping distribuido.'
+        : 'Suvy is built with <a href="https://astro.build" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">Astro</a> and <a href="https://tailwindcss.com" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">Tailwind CSS</a>. The companion crawler <a href="https://github.com/DuvyDev/DuvyCrawl" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">DuvyCrawl</a> uses Go, SQLite (FTS5), and a distributed scraping system.'
+      } />
       
       <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? 'Autor' : 'Author'}</h2>
-      <p>
-        {langCookie === 'es' ? 'Suvy fue creado por' : 'Suvy was created by'} <strong>Pablo M. Duval</strong> (<a href="https://github.com/DuvyDev" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">@DuvyDev</a>).
-      </p>
+      <p set:html={langCookie === 'es'
+        ? 'Suvy fue creado por <strong>Pablo M. Duval</strong> (<a href="https://github.com/DuvyDev" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">@DuvyDev</a>).'
+        : 'Suvy was created by <strong>Pablo M. Duval</strong> (<a href="https://github.com/DuvyDev" target="_blank" rel="noopener noreferrer" class="text-[var(--link-color)] hover:underline">@DuvyDev</a>).'
+      } />
       
       <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? 'Código abierto' : 'Open source'}</h2>
       <p>

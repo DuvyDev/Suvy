@@ -18,12 +18,10 @@ const metaDesc = langCookie === 'es'
     <p class="text-[var(--text-muted)] text-sm mb-8">{langCookie === 'es' ? 'Última actualización: 25 de abril de 2026' : 'Last updated: April 25, 2026'}</p>
     
     <div class="prose prose-lg text-[var(--text-color)] space-y-6">
-      <p>
-        {langCookie === 'es'
-          ? 'Al utilizar <strong>Suvy</strong>, aceptas los siguientes términos. Si no estás de acuerdo, por favor no uses el servicio.'
-          : 'By using <strong>Suvy</strong>, you agree to the following terms. If you do not agree, please do not use the service.'
-        }
-      </p>
+      <p set:html={langCookie === 'es'
+        ? 'Al utilizar <strong>Suvy</strong>, aceptas los siguientes términos. Si no estás de acuerdo, por favor no uses el servicio.'
+        : 'By using <strong>Suvy</strong>, you agree to the following terms. If you do not agree, please do not use the service.'
+      } />
       
       <h2 class="text-2xl font-bold text-[var(--text-color)] mt-8 mb-4">{langCookie === 'es' ? '1. Licencia' : '1. License'}</h2>
       <p>
