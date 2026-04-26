@@ -11,7 +11,7 @@ const { links } = Astro.props;
 {links.length > 0 && (
   <div class="sitelinks">
     {links.map((link) => (
-      <a href={link.url} target="_blank" rel="noopener noreferrer" class="sitelink" title={link.content}>
+      <a href={link.url} class="sitelink search-result-link" title={link.content} onclick="event.stopPropagation();">
         <span class="sitelink-title">{link.title}</span>
         <span class="sitelink-url">{(() => {
           try {

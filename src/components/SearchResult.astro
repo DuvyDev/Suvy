@@ -121,8 +121,8 @@ const crawlerApi = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
 ---
 
 <div class="mb-6 max-w-[700px] w-full" data-api-url={crawlerApi}>
-  <div class="search-result-card group flex flex-col p-4 rounded-2xl bg-[var(--card-bg)] backdrop-blur-sm border border-transparent hover:border-[var(--search-border)] hover:bg-[var(--card-hover)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer" onclick={`window.open('${result.url}', '_blank')`} data-url={result.url}>
-    <a href={result.url} target="_blank" rel="noopener noreferrer" class="search-result-link block mb-2" onclick="event.stopPropagation();">
+  <div class="search-result-card group flex flex-col p-4 rounded-2xl bg-[var(--card-bg)] backdrop-blur-sm border border-transparent hover:border-[var(--search-border)] hover:bg-[var(--card-hover)] hover:-translate-y-1 hover:shadow-lg transition-all duration-300 cursor-pointer" onclick={`window.open('${result.url}', '_self')`} data-url={result.url}>
+    <a href={result.url} class="search-result-link block mb-2" onclick="event.stopPropagation();">
       <span class="site-name">{siteName}</span>
       <div class="flex items-center space-x-3 mb-2 mt-1">
         <div class="w-7 h-7 rounded-full bg-[var(--button-bg)] flex items-center justify-center shadow-sm">

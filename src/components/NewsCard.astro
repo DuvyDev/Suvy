@@ -46,7 +46,7 @@ function relativeTime(isoDate: string | undefined): string | null {
       {items.map((item) => {
         const timeAgo = relativeTime(item.meta.publishedAt);
         return (
-          <a href={item.url} target="_blank" rel="noopener noreferrer" class="news-item">
+          <a href={item.url} class="news-item">
             <div class="news-thumb">
               <img src={item.meta.schemaImage} alt="" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('news-thumb-fallback');" />
             </div>
