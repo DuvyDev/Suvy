@@ -1,12 +1,9 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
-
-const CACHE_DIR = 'data';
-const CACHE_FILE = join(CACHE_DIR, 'nominatim-cache.json');
+import { getCache, setCache, pruneCache } from './cache-db';
 
 const TTL_MS = parseInt(process.env.NOMINATIM_CACHE_TTL_DAYS || '30', 10) * 24 * 60 * 60 * 1000;
 const MAX_ENTRIES = 5000;
 const TIMEOUT_MS = parseInt(process.env.NOMINATIM_TIMEOUT_MS || '4000', 10);
+const NAMESPACE = 'nominatim';
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org';
 const USER_AGENT = process.env.NOMINATIM_USER_AGENT || 'MySearch/1.0 (https://github.com/anomalyco)';
@@ -19,63 +16,7 @@ export interface NominatimResult {
   osmLink: string;
 }
 
-interface CacheEntry {
-  result: NominatimResult | null;
-  timestamp: number;
-}
-
-type CacheStore = Record<string, CacheEntry>;
-
-let memCache: CacheStore | null = null;
 let lastRequestTime = 0;
-
-function ensureDir(): void {
-  if (!existsSync(CACHE_DIR)) {
-    mkdirSync(CACHE_DIR, { recursive: true });
-  }
-}
-
-function loadCache(): CacheStore {
-  if (memCache) return memCache;
-  try {
-    if (existsSync(CACHE_FILE)) {
-      const raw = readFileSync(CACHE_FILE, 'utf-8');
-      memCache = JSON.parse(raw);
-      return memCache!;
-    }
-  } catch {
-    // Corrupted file — start fresh.
-  }
-  memCache = {};
-  return memCache;
-}
-
-function persistCache(): void {
-  ensureDir();
-  try {
-    writeFileSync(CACHE_FILE, JSON.stringify(memCache), 'utf-8');
-  } catch {
-    // Non-critical — next write will try again.
-  }
-}
-
-function prune(cache: CacheStore): void {
-  const cutoff = Date.now() - TTL_MS;
-  for (const key of Object.keys(cache)) {
-    if (cache[key].timestamp < cutoff) {
-      delete cache[key];
-    }
-  }
-
-  const entries = Object.entries(cache);
-  if (entries.length > MAX_ENTRIES) {
-    entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-    const toRemove = entries.length - MAX_ENTRIES;
-    for (let i = 0; i < toRemove; i++) {
-      delete cache[entries[i][0]];
-    }
-  }
-}
 
 function getCacheKey(query: string, lang: string): string {
   return `${query.trim().toLowerCase()}::${lang}`;
@@ -162,19 +103,18 @@ async function fetchNominatim(query: string, lang: string): Promise<NominatimRes
 export async function geocode(query: string, lang: string = 'es'): Promise<NominatimResult | null> {
   if (!query || query.trim() === '') return null;
 
-  const cache = loadCache();
   const key = getCacheKey(query, lang);
+  const cached = getCache<NominatimResult | null>(NAMESPACE, key, TTL_MS);
 
-  const cached = cache[key];
-  if (cached && Date.now() - cached.timestamp < TTL_MS) {
+  if (cached) {
     return cached.result;
   }
 
   const result = await fetchNominatim(query, lang);
 
-  cache[key] = { result, timestamp: Date.now() };
-  prune(cache);
-  persistCache();
+  setCache(NAMESPACE, key, result);
+  pruneCache(NAMESPACE, TTL_MS, MAX_ENTRIES);
 
   return result;
 }
+

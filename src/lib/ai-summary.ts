@@ -154,7 +154,8 @@ async function callOpenAIChatStreaming(
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || trimmed === 'data: [DONE]') {
+          if (!trimmed) continue;
+          if (trimmed === 'data: [DONE]') {
             controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
             controller.close();
             return;
@@ -314,7 +315,8 @@ async function callOpenAIStreaming(
 
         for (const line of lines) {
           const trimmed = line.trim();
-          if (!trimmed || trimmed === 'data: [DONE]') {
+          if (!trimmed) continue;
+          if (trimmed === 'data: [DONE]') {
             controller.enqueue(new TextEncoder().encode('data: [DONE]\n\n'));
             controller.close();
             return;
