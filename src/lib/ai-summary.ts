@@ -1,8 +1,8 @@
 import { getCachedSummary, setCachedSummary } from './ai-summary-cache';
 
-const BASE_URL = process.env.AI_API_BASE_URL || 'https://api.openai.com/v1';
-const API_KEY = process.env.AI_API_KEY || '';
-const MODEL = process.env.AI_MODEL || 'gpt-4o-mini';
+const BASE_URL = process.env.AI_SUMMARY_BASE_URL || 'http://localhost:11434/v1';
+const API_KEY = process.env.AI_SUMMARY_API_KEY || '';
+const MODEL = process.env.AI_SUMMARY_MODEL || 'llama3';
 const TIMEOUT_MS = 30000;
 const MAX_RESULTS = 5;
 
