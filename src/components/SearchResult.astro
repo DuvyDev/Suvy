@@ -7,9 +7,10 @@ import Sitelinks from './Sitelinks.astro';
 export interface Props {
   result: SearchResult;
   sitelinks?: SearchResultItem[];
+  isFirst?: boolean;
 }
 
-const { result, sitelinks = [] } = Astro.props;
+const { result, sitelinks = [], isFirst = false } = Astro.props;
 
 const domain = (() => {
   try {
@@ -140,7 +141,11 @@ const crawlerApi = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
       <span class="text-[12px] text-[var(--text-muted)] font-medium mb-1">{timeAgo}</span>
     )}
     <p class="result-content text-[15px] text-[var(--text-color)] leading-relaxed line-clamp-3 opacity-90 font-light" set:html={result.content}></p>
-    <Sitelinks links={sitelinks} />
+    {sitelinks.length > 0 ? (
+      <Sitelinks links={sitelinks} />
+    ) : isFirst ? (
+      <div id="async-sitelinks" data-domain={domain} data-exclude={result.url}></div>
+    ) : null}
   </div>
 </div>
 
@@ -167,30 +172,65 @@ const crawlerApi = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
 </style>
 
 <script>
-  // Add interaction tracking
-  function trackClick(url) {
-    const query = new URLSearchParams(window.location.search).get('q');
-    const apiUrl = document.querySelector('[data-api-url]')?.getAttribute('data-api-url') || 'http://localhost:8080/api/v1';
-    
-    if (url && query) {
-      fetch(`${apiUrl}/interact`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query, url }),
-        keepalive: true
-      }).catch(console.error);
+  document.addEventListener('astro:page-load', () => {
+    // Async sitelinks loader
+    const container = document.getElementById('async-sitelinks');
+    if (container) {
+      const query = new URLSearchParams(window.location.search).get('q');
+      const domain = container.getAttribute('data-domain');
+      const exclude = container.getAttribute('data-exclude');
+      if (query && domain) {
+        fetch(`/api/sitelinks?q=${encodeURIComponent(query)}&domain=${encodeURIComponent(domain)}&exclude=${encodeURIComponent(exclude || '')}`)
+          .then(r => r.json())
+          .then(data => {
+            if (!data.sitelinks || data.sitelinks.length === 0) return;
+            const grid = document.createElement('div');
+            grid.className = 'sitelinks';
+            data.sitelinks.forEach(link => {
+              let displayPath;
+              try {
+                const u = new URL(link.url);
+                displayPath = u.pathname !== '/' ? u.pathname : u.hostname;
+              } catch { displayPath = link.url; }
+              const a = document.createElement('a');
+              a.href = link.url;
+              a.className = 'sitelink search-result-link';
+              a.title = link.content || '';
+              a.onclick = (e) => e.stopPropagation();
+              a.innerHTML = `<span class="sitelink-title">${link.title}</span><span class="sitelink-url">${displayPath}</span>`;
+              grid.appendChild(a);
+            });
+            container.replaceWith(grid);
+          })
+          .catch(() => {});
+      }
     }
-  }
 
-  document.querySelectorAll('.search-result-card').forEach(card => {
-    card.addEventListener('click', () => {
-      trackClick(card.getAttribute('data-url'));
+    // Add interaction tracking
+    function trackClick(url) {
+      const query = new URLSearchParams(window.location.search).get('q');
+      const apiUrl = document.querySelector('[data-api-url]')?.getAttribute('data-api-url') || 'http://localhost:8080/api/v1';
+      
+      if (url && query) {
+        fetch(`${apiUrl}/interact`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query, url }),
+          keepalive: true
+        }).catch(console.error);
+      }
+    }
+
+    document.querySelectorAll('.search-result-card').forEach(card => {
+      card.addEventListener('click', () => {
+        trackClick(card.getAttribute('data-url'));
+      });
     });
-  });
 
-  document.querySelectorAll('.search-result-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-      trackClick(link.getAttribute('href'));
+    document.querySelectorAll('.search-result-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        trackClick(link.getAttribute('href'));
+      });
     });
   });
 </script>

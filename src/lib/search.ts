@@ -121,24 +121,8 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
     })
     .slice(0, newsMax);
 
-  // Fetch sitelinks for the first result's domain (page 1 only).
+  // Sitelinks are now fetched lazily on the client side to avoid blocking SSR.
   let sitelinks: SearchResultItem[] = [];
-  if (page === 1 && localResults.length > 0) {
-    const firstDomain = localResults[0].meta.domain;
-    try {
-      const { results: domainResults } = await searchCrawlerFull(
-        query || '',
-        6,
-        1,
-        { ...mergedFilters, domain: firstDomain }
-      );
-      sitelinks = domainResults
-        .filter((r) => r.url !== localResults[0].url)
-        .slice(0, 4);
-    } catch {
-      // Silently ignore — sitelinks are non-critical.
-    }
-  }
 
   // Fire-and-forget: fetch DDG results in background to feed the crawler,
   // but only if we haven't queried DDG for this term recently.

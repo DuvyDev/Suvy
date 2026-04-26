@@ -38,72 +38,91 @@ const maptilerApiKey = process.env.MAP_TILER_API_KEY || '';
   <span class="map-attribution">&copy; OpenStreetMap contributors &copy; MapTiler</span>
 </div>
 
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
-<script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
-  const mapCard = document.getElementById('map-card');
-  if (mapCard) {
-    const query = mapCard.getAttribute('data-query');
-    const lang = mapCard.getAttribute('data-lang');
-    const apiKey = mapCard.getAttribute('data-apikey');
+  document.addEventListener('astro:page-load', () => {
+    const mapCard = document.getElementById('map-card');
+    if (mapCard) {
+      const query = mapCard.getAttribute('data-query');
+      const lang = mapCard.getAttribute('data-lang');
+      const apiKey = mapCard.getAttribute('data-apikey');
 
-    if (query) {
-      fetch(`/api/map?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(lang || 'es')}`)
-        .then(r => r.json())
-        .then(data => {
-          if (data.found && data.result) {
-            const { lat, lon, name, type, osmLink } = data.result;
-            
-            const titleEl = document.getElementById('map-title');
-            if (titleEl) titleEl.textContent = name;
-            
-            const typeEl = document.getElementById('map-type');
-            if (typeEl) typeEl.textContent = type;
-            
-            const latDir = lat >= 0 ? 'N' : 'S';
-            const lonDir = lon >= 0 ? 'E' : 'W';
-            const latFormatted = `${Math.abs(lat).toFixed(4)}° ${latDir}`;
-            const lonFormatted = `${Math.abs(lon).toFixed(4)}° ${lonDir}`;
-            
-            const latEl = document.getElementById('map-lat');
-            if (latEl) latEl.textContent = latFormatted;
-            
-            const lonEl = document.getElementById('map-lon');
-            if (lonEl) lonEl.textContent = lonFormatted;
-            
-            const linkEl = document.getElementById('map-link');
-            if (linkEl && linkEl instanceof HTMLAnchorElement) linkEl.href = osmLink;
+      if (query) {
+        fetch(`/api/map?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(lang || 'es')}`)
+          .then(r => r.json())
+          .then(data => {
+            if (data.found && data.result) {
+              const { lat, lon, name, type, osmLink } = data.result;
+              
+              const titleEl = document.getElementById('map-title');
+              if (titleEl) titleEl.textContent = name;
+              
+              const typeEl = document.getElementById('map-type');
+              if (typeEl) typeEl.textContent = type;
+              
+              const latDir = lat >= 0 ? 'N' : 'S';
+              const lonDir = lon >= 0 ? 'E' : 'W';
+              const latFormatted = `${Math.abs(lat).toFixed(4)}° ${latDir}`;
+              const lonFormatted = `${Math.abs(lon).toFixed(4)}° ${lonDir}`;
+              
+              const latEl = document.getElementById('map-lat');
+              if (latEl) latEl.textContent = latFormatted;
+              
+              const lonEl = document.getElementById('map-lon');
+              if (lonEl) lonEl.textContent = lonFormatted;
+              
+              const linkEl = document.getElementById('map-link');
+              if (linkEl && linkEl instanceof HTMLAnchorElement) linkEl.href = osmLink;
 
-            mapCard.style.display = 'block';
-            mapCard.classList.add('animate-fade-in-up');
+              mapCard.style.display = 'block';
+              mapCard.classList.add('animate-fade-in-up');
 
-            const container = document.getElementById('map-container');
-            if (container) {
-              container.style.display = 'block';
-              if (window.L && apiKey) {
-                try {
-                  const mapId = 'leaflet-map-' + Date.now();
-                  container.id = mapId;
-                  const map = window.L.map(mapId, { center: [lat, lon], zoom: 13, zoomControl: false });
-                  window.L.tileLayer(
-                    'https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=' + apiKey,
-                    { tileSize: 512, zoomOffset: -1, attribution: '&copy; OpenStreetMap &copy; MapTiler' }
-                  ).addTo(map);
-                  window.L.marker([lat, lon]).addTo(map).bindPopup(name).openPopup();
-                  
-                  setTimeout(() => map.invalidateSize(), 50);
-                } catch(e) {
-                   container.innerHTML = '<div class="map-error"><span class="map-error-text">Map unavailable</span></div>';
+              const container = document.getElementById('map-container');
+              if (container && apiKey) {
+                container.style.display = 'block';
+                // Lazy-load Leaflet CSS + JS only when we actually need a map
+                if (!document.querySelector('link[href*="leaflet"]')) {
+                  const cssLink = document.createElement('link');
+                  cssLink.rel = 'stylesheet';
+                  cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                  cssLink.crossOrigin = '';
+                  document.head.appendChild(cssLink);
                 }
-              } else {
-                 container.innerHTML = `<a href="${osmLink}" class="map-preview-link" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 2rem; color: var(--link-color); text-decoration:none;"><svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:0.5rem;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span>Open Map</span></a>`;
+
+                const initMap = () => {
+                  try {
+                    const mapId = 'leaflet-map-' + Date.now();
+                    container.id = mapId;
+                    const map = window.L.map(mapId, { center: [lat, lon], zoom: 13, zoomControl: false });
+                    window.L.tileLayer(
+                      'https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=' + apiKey,
+                      { tileSize: 512, zoomOffset: -1, attribution: '&copy; OpenStreetMap &copy; MapTiler' }
+                    ).addTo(map);
+                    window.L.marker([lat, lon]).addTo(map).bindPopup(name).openPopup();
+                    setTimeout(() => map.invalidateSize(), 50);
+                  } catch(e) {
+                    container.innerHTML = '<div class="map-error"><span class="map-error-text">Map unavailable</span></div>';
+                  }
+                };
+
+                if (window.L) {
+                  initMap();
+                } else {
+                  const script = document.createElement('script');
+                  script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                  script.crossOrigin = '';
+                  script.onload = initMap;
+                  document.head.appendChild(script);
+                }
+              } else if (container) {
+                container.style.display = 'block';
+                container.innerHTML = `<a href="${osmLink}" class="map-preview-link" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding: 2rem; color: var(--link-color); text-decoration:none;"><svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-bottom:0.5rem;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg><span>Open Map</span></a>`;
               }
             }
-          }
-        })
-        .catch(e => console.error('Error fetching map:', e));
+          })
+          .catch(e => console.error('Error fetching map:', e));
+      }
     }
-  }
+  });
 </script>
 
 <style>
