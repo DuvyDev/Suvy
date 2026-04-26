@@ -1,0 +1,787 @@
+---
+export interface Props {
+  query: string;
+  lang: string;
+  results: { title: string; content: string; url: string }[];
+  label: string;
+  disclaimer: string;
+  loadingText: string;
+  readMore?: string;
+  readLess?: string;
+  chatPlaceholder?: string;
+  chatSend?: string;
+  chatThinking?: string;
+}
+
+const { 
+  query, 
+  lang, 
+  results, 
+  label, 
+  disclaimer, 
+  loadingText, 
+  readMore = 'Read more', 
+  readLess = 'Read less',
+  chatPlaceholder = 'Ask a follow-up question...',
+  chatSend = 'Send',
+  chatThinking = 'Thinking...'
+} = Astro.props;
+---
+
+<div class="ai-summary-card" id="ai-summary-card" style="display: none;" data-query={query} data-lang={lang} data-results={JSON.stringify(results)} data-read-more={readMore} data-read-less={readLess} data-chat-placeholder={chatPlaceholder} data-chat-send={chatSend} data-chat-thinking={chatThinking}>
+  <div class="ai-summary-header">
+    <svg class="ai-summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+    </svg>
+    <h3 class="ai-summary-title">{label}</h3>
+  </div>
+  
+  <div class="ai-summary-body" id="ai-summary-body">
+    <div class="ai-summary-content" id="ai-summary-content"></div>
+    <div class="ai-summary-fade" id="ai-summary-fade"></div>
+  </div>
+  <button class="ai-summary-read-more" id="ai-summary-read-more" style="display: none;">{readMore}</button>
+  
+  <div class="ai-summary-sources" id="ai-summary-sources" style="display: none;"></div>
+  
+  <!-- Chat Section -->
+  <div class="ai-chat-container" id="ai-chat-container" style="display: none;">
+    <div class="ai-chat-history" id="ai-chat-history"></div>
+    <form class="ai-chat-form" id="ai-chat-form">
+      <input type="text" id="ai-chat-input" placeholder={chatPlaceholder} autocomplete="off" />
+      <button type="submit" id="ai-chat-submit">
+        <span class="ai-chat-submit-text">{chatSend}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 12h14" /></svg>
+      </button>
+    </form>
+  </div>
+
+  <span class="ai-summary-disclaimer">{disclaimer}</span>
+</div>
+
+<div class="ai-summary-skeleton" id="ai-summary-skeleton" style="display: none;">
+  <div class="ai-summary-header">
+    <svg class="ai-summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+    </svg>
+    <h3 class="ai-summary-title">{label}</h3>
+    <span class="ai-summary-loading-text">{loadingText}</span>
+  </div>
+  <div class="ai-summary-loading">
+    <div class="skeleton-line" style="width: 100%;"></div>
+    <div class="skeleton-line" style="width: 85%;"></div>
+    <div class="skeleton-line" style="width: 60%;"></div>
+  </div>
+</div>
+
+<script>
+function initAiSummary() {
+  const card = document.getElementById('ai-summary-card');
+  if (!card || card.dataset.loaded) return;
+  card.dataset.loaded = 'true';
+
+  const skeleton = document.getElementById('ai-summary-skeleton');
+  const contentEl = document.getElementById('ai-summary-content');
+  const bodyEl = document.getElementById('ai-summary-body');
+  const fadeEl = document.getElementById('ai-summary-fade');
+  const readMoreBtn = document.getElementById('ai-summary-read-more') as HTMLButtonElement | null;
+  const sourcesEl = document.getElementById('ai-summary-sources');
+  
+  // Chat Elements
+  const chatContainer = document.getElementById('ai-chat-container');
+  const chatHistoryEl = document.getElementById('ai-chat-history');
+  const chatForm = document.getElementById('ai-chat-form') as HTMLFormElement;
+  const chatInput = document.getElementById('ai-chat-input') as HTMLInputElement;
+  const chatSubmitBtn = document.getElementById('ai-chat-submit') as HTMLButtonElement;
+
+  if (!skeleton || !contentEl || !sourcesEl || !bodyEl || !fadeEl || !readMoreBtn || !chatContainer || !chatForm) return;
+
+  const query = card.getAttribute('data-query');
+  const lang = card.getAttribute('data-lang') || 'en';
+  const readMoreLabel = card.getAttribute('data-read-more') || 'Read more';
+  const readLessLabel = card.getAttribute('data-read-less') || 'Read less';
+  const chatThinkingLabel = card.getAttribute('data-chat-thinking') || 'Thinking...';
+  
+  let results: { title: string; content: string; url: string }[] = [];
+  try {
+    results = JSON.parse(card.getAttribute('data-results') || '[]');
+  } catch { return; }
+
+  if (!query || results.length === 0) {
+    skeleton.style.display = 'none';
+    return;
+  }
+
+  skeleton.style.display = 'block';
+
+  let sourcesList: { title: string; url: string }[] = [];
+  let rawText = '';
+  let isExpanded = false;
+  let streamDone = false;
+  let chatHistory: { role: string; content: string }[] = [];
+  const COLLAPSED_HEIGHT = 168; 
+
+  function parseMarkdown(md: string): string {
+    let html = md;
+    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => `<pre><code>${code.trim()}</code></pre>`);
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+    html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    html = html.replace(/^#### (.+)$/gm, '<h6>$1</h6>');
+    html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>');
+    html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^# (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^---$/gm, '<hr>');
+    html = html.replace(/(?:^[-*] .+(?:\n|$))+/gm, (block) => {
+      const items = block.trim().split('\n').map(line => `<li>${line.replace(/^[-*] /, '')}</li>`).join('');
+      return `<ul>${items}</ul>`;
+    });
+    html = html.replace(/(?:^\d+\. .+(?:\n|$))+/gm, (block) => {
+      const items = block.trim().split('\n').map(line => `<li>${line.replace(/^\d+\. /, '')}</li>`).join('');
+      return `<ol>${items}</ol>`;
+    });
+    html = html.replace(/\n{2,}/g, '</p><p>');
+    html = html.replace(/\n/g, '<br>');
+    html = `<p>${html}</p>`;
+    html = html.replace(/<p>\s*<\/p>/g, '');
+    html = html.replace(/<p>\s*(<(?:ul|ol|pre|h[1-6]|hr))/g, '$1');
+    html = html.replace(/(<\/(?:ul|ol|pre|h[1-6])>|<hr>)\s*<\/p>/g, '$1');
+    return html;
+  }
+
+  function linkifyCitations(html: string): string {
+    return html.replace(/\[(\d+)\]/g, (_match, num) => {
+      const idx = parseInt(num, 10) - 1;
+      if (idx >= 0 && idx < sourcesList.length) {
+        const src = sourcesList[idx];
+        return `<a href="${src.url}" class="ai-citation-link" title="${src.title}" target="_blank" rel="noopener noreferrer">[${num}]</a>`;
+      }
+      return `[${num}]`;
+    });
+  }
+
+  function renderContent(): void {
+    const parsed = parseMarkdown(rawText);
+    const withCitations = linkifyCitations(parsed);
+    contentEl!.innerHTML = withCitations;
+  }
+
+  function updateCollapse(): void {
+    if (!streamDone) {
+      bodyEl!.style.maxHeight = COLLAPSED_HEIGHT + 'px';
+      bodyEl!.classList.add('collapsed');
+      fadeEl!.style.display = 'block';
+      readMoreBtn!.style.display = 'none';
+      sourcesEl!.style.display = 'none';
+      chatContainer!.style.display = 'none';
+      return;
+    }
+
+    const scrollH = contentEl!.scrollHeight;
+    if (scrollH > COLLAPSED_HEIGHT) {
+      if (!isExpanded) {
+        bodyEl!.style.maxHeight = COLLAPSED_HEIGHT + 'px';
+        bodyEl!.classList.add('collapsed');
+        fadeEl!.style.display = 'block';
+        readMoreBtn!.style.display = 'inline-flex';
+        readMoreBtn!.textContent = readMoreLabel;
+        sourcesEl!.style.display = 'none';
+        chatContainer!.style.display = 'none';
+      } else {
+        bodyEl!.style.maxHeight = scrollH + 'px';
+        bodyEl!.classList.remove('collapsed');
+        fadeEl!.style.display = 'none';
+        readMoreBtn!.style.display = 'inline-flex';
+        readMoreBtn!.textContent = readLessLabel;
+        if (sourcesList.length > 0) sourcesEl!.style.display = 'flex';
+        chatContainer!.style.display = 'flex';
+      }
+    } else {
+      bodyEl!.style.maxHeight = 'none';
+      bodyEl!.classList.remove('collapsed');
+      fadeEl!.style.display = 'none';
+      readMoreBtn!.style.display = 'none';
+      if (sourcesList.length > 0) sourcesEl!.style.display = 'flex';
+      chatContainer!.style.display = 'flex';
+    }
+  }
+
+  readMoreBtn.addEventListener('click', () => {
+    isExpanded = !isExpanded;
+    updateCollapse();
+  });
+
+  function renderSources(sources: { title: string; url: string }[]): void {
+    if (!sourcesEl || sources.length === 0) return;
+    sourcesList = sources;
+    sourcesEl.innerHTML = '';
+    sources.forEach((s, i) => {
+      const a = document.createElement('a');
+      a.href = s.url;
+      a.className = 'ai-summary-source';
+      a.textContent = `[${i + 1}]`;
+      a.title = s.title;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      sourcesEl.appendChild(a);
+    });
+    // Let updateCollapse control visibility
+    renderContent();
+  }
+
+  function enableChat() {
+    // updateCollapse will evaluate whether chatContainer should be shown
+    updateCollapse();
+  }
+
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const userMessage = chatInput.value.trim();
+    if (!userMessage) return;
+
+    // Push and render user message
+    chatHistory.push({ role: 'user', content: userMessage });
+    
+    const userBubble = document.createElement('div');
+    userBubble.className = 'ai-chat-bubble user';
+    userBubble.textContent = userMessage;
+    chatHistoryEl!.appendChild(userBubble);
+    
+    chatInput.value = '';
+    chatInput.disabled = true;
+    chatSubmitBtn.disabled = true;
+
+    // Create assistant bubble with thinking placeholder
+    const assistantBubble = document.createElement('div');
+    assistantBubble.className = 'ai-chat-bubble assistant ai-summary-content';
+    assistantBubble.innerHTML = `<span class="ai-chat-thinking">${chatThinkingLabel}</span>`;
+    chatHistoryEl!.appendChild(assistantBubble);
+    
+    // Scroll to bottom
+    chatHistoryEl!.scrollTop = chatHistoryEl!.scrollHeight;
+
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: chatHistory, lang }),
+      });
+
+      if (!response.ok) throw new Error('Chat failed');
+
+      let currentAssistantRawText = '';
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No reader');
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      const pump = async () => {
+        const { done, value } = await reader.read();
+        if (done) {
+          if (buffer) {
+             const lines = buffer.split('\n');
+             for (const line of lines) {
+               const trimmed = line.trim();
+               if (!trimmed || trimmed === 'data: [DONE]') continue;
+               if (!trimmed.startsWith('data: ')) continue;
+               try {
+                 const json = JSON.parse(trimmed.slice(6));
+                 if (json.text) currentAssistantRawText += json.text;
+               } catch {}
+             }
+          }
+          chatHistory.push({ role: 'assistant', content: currentAssistantRawText });
+          chatInput.disabled = false;
+          chatSubmitBtn.disabled = false;
+          chatInput.focus();
+          return;
+        }
+        
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed === 'data: [DONE]') continue;
+          if (!trimmed.startsWith('data: ')) continue;
+          try {
+            const json = JSON.parse(trimmed.slice(6));
+            if (json.text) {
+              currentAssistantRawText += json.text;
+              assistantBubble.innerHTML = linkifyCitations(parseMarkdown(currentAssistantRawText));
+              // Auto scroll while typing
+              chatHistoryEl!.scrollTop = chatHistoryEl!.scrollHeight;
+            }
+          } catch {}
+        }
+        await pump();
+      };
+      await pump();
+    } catch (err) {
+       assistantBubble.innerHTML = `<span style="color:var(--text-muted)">Error fetching response.</span>`;
+       chatInput.disabled = false;
+       chatSubmitBtn.disabled = false;
+    }
+  });
+
+  fetch('/api/ai-summary', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: query, lang, results }),
+  })
+    .then((response) => {
+      const contentType = response.headers.get('content-type') || '';
+
+      if (contentType.includes('text/event-stream')) {
+        skeleton.style.display = 'none';
+        card.style.display = 'block';
+        card.classList.add('animate-fade-in-up');
+
+        const reader = response.body?.getReader();
+        if (!reader) throw new Error('No reader');
+
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        function read(): void {
+          reader!.read().then(({ done, value }) => {
+            if (done) {
+              processBuffer(true);
+              return;
+            }
+            buffer += decoder.decode(value, { stream: true });
+            processBuffer(false);
+            read();
+          }).catch(() => {
+            skeleton.style.display = 'none';
+          });
+        }
+
+        function processBuffer(isDone: boolean): void {
+          const lines = buffer.split('\n');
+          buffer = isDone ? '' : (lines.pop() || '');
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed || trimmed === 'data: [DONE]') continue;
+            if (!trimmed.startsWith('data: ')) continue;
+
+            try {
+              const json = JSON.parse(trimmed.slice(6));
+              if (json.text) {
+                rawText += json.text;
+                renderContent();
+                updateCollapse();
+              }
+              if (json.sources && Array.isArray(json.sources)) {
+                renderSources(json.sources);
+              }
+              if (json.summary && json.found) {
+                rawText = json.summary;
+                if (json.sources) renderSources(json.sources);
+                renderContent();
+                skeleton.style.display = 'none';
+                card.style.display = 'block';
+                if (!card.classList.contains('animate-fade-in-up')) {
+                  card.classList.add('animate-fade-in-up');
+                }
+              }
+            } catch {
+              // Skip malformed
+            }
+          }
+
+          if (isDone) {
+            streamDone = true;
+            // Inject the original context so the AI remembers the search results during the chat
+            const contextText = `Original search query: ${query}\n\nSearch results context provided to you earlier:\n` + 
+              results.map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`).join('\n\n');
+            chatHistory.push({ role: 'user', content: contextText });
+            chatHistory.push({ role: 'assistant', content: rawText });
+            renderContent();
+            updateCollapse();
+            enableChat();
+          }
+        }
+
+        read();
+      } else {
+        return response.json().then((data) => {
+          if (data.found && data.summary) {
+            skeleton.style.display = 'none';
+            rawText = data.summary;
+            // Inject the original context so the AI remembers the search results during the chat
+            const contextText = `Original search query: ${query}\n\nSearch results context provided to you earlier:\n` + 
+              results.map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`).join('\n\n');
+            chatHistory.push({ role: 'user', content: contextText });
+            chatHistory.push({ role: 'assistant', content: rawText });
+            if (data.sources && data.sources.length > 0) {
+              renderSources(data.sources);
+            }
+            renderContent();
+            streamDone = true;
+            updateCollapse();
+            enableChat();
+            card.style.display = 'block';
+            card.classList.add('animate-fade-in-up');
+          } else {
+            skeleton.style.display = 'none';
+          }
+        });
+      }
+    })
+    .catch(() => {
+      skeleton.style.display = 'none';
+    });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initAiSummary);
+} else {
+  initAiSummary();
+}
+document.addEventListener('astro:page-load', initAiSummary);
+</script>
+
+<style>
+.ai-summary-card {
+  background: var(--card-bg);
+  border: 1px solid var(--search-border);
+  border-left: 3px solid var(--link-color);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--search-shadow);
+  margin-bottom: 0.75rem;
+  transition: box-shadow 0.3s ease;
+}
+.ai-summary-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+}
+.ai-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+.ai-summary-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  color: var(--link-color);
+  flex-shrink: 0;
+}
+.ai-summary-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Body: collapsible wrapper ── */
+.ai-summary-body {
+  position: relative;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.ai-summary-fade {
+  display: none;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: linear-gradient(to bottom, transparent, var(--card-bg));
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Content: markdown-rendered text ── */
+.ai-summary-content {
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--text-color);
+  opacity: 0.95;
+}
+.ai-summary-content :global(p) { margin: 0 0 0.5em 0; }
+.ai-summary-content :global(p:last-child) { margin-bottom: 0; }
+.ai-summary-content :global(strong) { font-weight: 700; color: var(--text-color); }
+.ai-summary-content :global(em) { font-style: italic; }
+.ai-summary-content :global(h4),
+.ai-summary-content :global(h5),
+.ai-summary-content :global(h6) { font-weight: 700; color: var(--text-color); margin: 0.75em 0 0.35em 0; font-size: 0.92rem; }
+.ai-summary-content :global(h4) { font-size: 0.95rem; }
+.ai-summary-content :global(ul),
+.ai-summary-content :global(ol) { margin: 0.4em 0; padding-left: 1.5em; }
+.ai-summary-content :global(li) { margin-bottom: 0.2em; }
+.ai-summary-content :global(code) { font-family: 'Fira Code', 'Consolas', monospace; font-size: 0.82em; background: var(--button-bg); border: 1px solid var(--button-border); padding: 0.15em 0.4em; border-radius: 0.3rem; }
+.ai-summary-content :global(pre) { background: var(--button-bg); border: 1px solid var(--button-border); border-radius: 0.5rem; padding: 0.75em 1em; overflow-x: auto; margin: 0.5em 0; }
+.ai-summary-content :global(pre code) { background: none; border: none; padding: 0; }
+.ai-summary-content :global(hr) { border: none; border-top: 1px solid var(--button-border); margin: 0.75em 0; }
+
+.ai-summary-content :global(.ai-citation-link) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7em;
+  font-weight: 700;
+  color: var(--link-color);
+  text-decoration: none;
+  vertical-align: super;
+  line-height: 1;
+  padding: 0.05em 0.15em;
+  border-radius: 0.2rem;
+  transition: all 0.15s;
+}
+.ai-summary-content :global(.ai-citation-link:hover) {
+  background: var(--button-bg);
+  text-decoration: underline;
+}
+
+/* ── Read more button ── */
+.ai-summary-read-more {
+  display: none;
+  align-items: center;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--button-border);
+  border-radius: 0.6rem;
+  background: var(--button-bg);
+  color: var(--link-color);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 2;
+  position: relative;
+}
+.ai-summary-read-more:hover {
+  background: var(--button-hover);
+  border-color: var(--link-color);
+}
+
+/* ── Sources bar ── */
+.ai-summary-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--button-border);
+}
+.ai-summary-source {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--link-color);
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.ai-summary-source:hover {
+  background: var(--button-hover);
+  border-color: var(--link-color);
+}
+
+/* ── Chat Container ── */
+.ai-chat-container {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--button-border);
+}
+.ai-chat-history {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: 450px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+  padding-right: 0.5rem;
+  scroll-behavior: smooth;
+}
+.ai-chat-history::-webkit-scrollbar { width: 5px; }
+.ai-chat-history::-webkit-scrollbar-track { background: transparent; }
+.ai-chat-history::-webkit-scrollbar-thumb { background: var(--button-border); border-radius: 5px; }
+
+:global(.ai-chat-bubble) {
+  max-width: 85%;
+  padding: 0.85rem 1.1rem;
+  border-radius: 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+:global(.ai-chat-bubble.user) {
+  align-self: flex-end;
+  background: var(--link-color);
+  color: #ffffff;
+  border-bottom-right-radius: 0.25rem;
+  font-weight: 500;
+}
+:global(.ai-chat-bubble.assistant) {
+  align-self: flex-start;
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
+  border-bottom-left-radius: 0.25rem;
+  color: var(--text-color);
+}
+/* Re-apply markdown styling specifically inside assistant chat bubbles */
+:global(.ai-chat-bubble.assistant p) { margin: 0 0 0.5em 0; }
+:global(.ai-chat-bubble.assistant p:last-child) { margin-bottom: 0; }
+:global(.ai-chat-bubble.assistant strong) { font-weight: 700; }
+:global(.ai-chat-bubble.assistant code) { 
+  font-family: 'Fira Code', 'Consolas', monospace; 
+  font-size: 0.82em; 
+  background: rgba(0,0,0,0.1); 
+  padding: 0.15em 0.4em; 
+  border-radius: 0.3rem; 
+}
+:global(.ai-chat-bubble.assistant pre) { 
+  background: rgba(0,0,0,0.1); 
+  border-radius: 0.5rem; 
+  padding: 0.75em 1em; 
+  overflow-x: auto; 
+  margin: 0.5em 0; 
+}
+:global(.ai-chat-bubble.assistant pre code) { background: none; padding: 0; }
+:global(.ai-chat-bubble.assistant ul), :global(.ai-chat-bubble.assistant ol) { margin: 0.4em 0; padding-left: 1.5em; }
+
+:global(.ai-chat-thinking) {
+  font-style: italic;
+  opacity: 0.6;
+  font-size: 0.85rem;
+  display: inline-block;
+  animation: pulse 1.5s infinite;
+}
+
+/* Chat Form */
+.ai-chat-form {
+  display: flex;
+  gap: 0.5rem;
+  position: relative;
+  align-items: center;
+}
+#ai-chat-input {
+  flex: 1;
+  background: var(--card-bg);
+  border: 1px solid var(--search-border);
+  border-radius: 2rem;
+  padding: 0.75rem 1.25rem;
+  padding-right: 3.5rem;
+  font-size: 0.9rem;
+  color: var(--text-color);
+  outline: none;
+  transition: all 0.25s ease;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
+#ai-chat-input:focus {
+  border-color: var(--link-color);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
+  background: var(--bg-color);
+}
+#ai-chat-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+#ai-chat-submit {
+  position: absolute;
+  right: 0.4rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--link-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#ai-chat-submit:hover:not(:disabled) {
+  background: #3367d6; /* Slightly darker shade of standard blue */
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 4px 10px rgba(66, 133, 244, 0.3);
+}
+#ai-chat-submit:disabled {
+  background: var(--button-border);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+#ai-chat-submit svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-right: 2px;
+}
+.ai-chat-submit-text {
+  display: none;
+}
+
+/* ── Disclaimer ── */
+.ai-summary-disclaimer {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+/* ── Skeleton loading ── */
+.ai-summary-skeleton {
+  background: var(--card-bg);
+  border: 1px solid var(--search-border);
+  border-left: 3px solid var(--link-color);
+  border-radius: 1.25rem;
+  padding: 1.25rem;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--search-shadow);
+  margin-bottom: 0.75rem;
+}
+.ai-summary-loading-text {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  opacity: 0.6;
+  font-style: italic;
+}
+.ai-summary-loading {
+  margin-top: 0.5rem;
+}
+.skeleton-line {
+  height: 0.85rem;
+  border-radius: 0.5rem;
+  background: var(--button-bg);
+  margin-bottom: 0.5rem;
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>

@@ -56,6 +56,14 @@ export const translations = {
     suggestKeywords: 'Prueba diferentes palabras clave.',
     suggestGeneral: 'Prueba palabras clave más generales.',
     backToSuvy: '← Volver a Suvy',
+  aiSummary: 'Resumen IA',
+  aiSummaryLoading: 'Generando resumen...',
+  aiSummaryDisclaimer: 'El resumen IA puede contener errores. Verifica la información con las fuentes.',
+  aiSummaryReadMore: 'Leer más',
+  aiSummaryReadLess: 'Leer menos',
+  aiChatInputPlaceholder: 'Haz una pregunta de seguimiento...',
+  aiChatSend: 'Enviar',
+  aiChatThinking: 'Pensando...',
   },
   en: {
     searchPlaceholder: 'Search...',
@@ -112,6 +120,14 @@ export const translations = {
     suggestKeywords: 'Try different keywords.',
     suggestGeneral: 'Try more general keywords.',
     backToSuvy: '← Back to Suvy',
+  aiSummary: 'AI Summary',
+  aiSummaryLoading: 'Generating summary...',
+  aiSummaryDisclaimer: 'AI summary may contain errors. Verify information with the sources.',
+  aiSummaryReadMore: 'Read more',
+  aiSummaryReadLess: 'Read less',
+  aiChatInputPlaceholder: 'Ask a follow-up question...',
+  aiChatSend: 'Send',
+  aiChatThinking: 'Thinking...',
   }
 };
 

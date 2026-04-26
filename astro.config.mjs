@@ -18,7 +18,12 @@ export default defineConfig({
     host: process.env.HOST || true, // default: 0.0.0.0 for containers / tunnels
   },
   vite: {
-    plugins: [tailwindcss()]
+    plugins: [tailwindcss()],
+    server: {
+      watch: {
+        ignored: ['**/data/**']
+      }
+    }
   },
 
   adapter: node({

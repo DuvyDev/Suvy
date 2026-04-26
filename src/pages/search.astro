@@ -5,6 +5,7 @@ import SearchResult from '../components/SearchResult.astro';
 import WikipediaCard from '../components/WikipediaCard.astro';
 import NewsCard from '../components/NewsCard.astro';
 import MapCard from '../components/MapCard.astro';
+import AiSummaryCard from '../components/AiSummaryCard.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import LanguageToggle from '../components/LanguageToggle.astro';
 import { search, type SearchOptions } from '../lib/search';
@@ -207,7 +208,22 @@ const activeAfter = truncMin(afterParam);
     ) : (
       <div class:list={['results-layout', { 'has-sidebar': !!(q || newsResults.length) }]}>
         <div class="results-main">
-          <div class="flex flex-col gap-2">
+              {q && items.length > 0 && (
+                <AiSummaryCard
+                  query={q}
+                  lang={langFilter || langCookie || 'en'}
+                  results={items.slice(0, 5).map(r => ({ title: r.title, content: r.content, url: r.url }))}
+                  label={t.aiSummary}
+                  disclaimer={t.aiSummaryDisclaimer}
+                  loadingText={t.aiSummaryLoading}
+                  readMore={t.aiSummaryReadMore}
+                  readLess={t.aiSummaryReadLess}
+                  chatPlaceholder={t.aiChatInputPlaceholder}
+                  chatSend={t.aiChatSend}
+                  chatThinking={t.aiChatThinking}
+                />
+              )}
+              <div class="flex flex-col gap-2">
             {items.map((result, i) => (
               <div class="animate-fade-in-up" style={`animation-delay: ${i * 0.05}s;`}>
                 <SearchResult result={result} sitelinks={i === 0 ? sitelinks : []} isFirst={i === 0} />
