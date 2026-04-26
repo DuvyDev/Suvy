@@ -27,53 +27,61 @@ const { query, lang } = Astro.props;
 </div>
 
 <script>
-  document.addEventListener('astro:page-load', () => {
-    const wikiCard = document.getElementById('wiki-card');
-    if (wikiCard) {
-      const query = wikiCard.getAttribute('data-query');
-      const lang = wikiCard.getAttribute('data-lang');
-      
-      if (query) {
-        fetch(`/api/wikipedia?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(lang || 'es')}`)
-          .then(r => r.json())
-          .then(data => {
-            if (data.found && data.result) {
-              const titleEl = document.getElementById('wiki-title');
-              if (titleEl) titleEl.textContent = data.result.title;
-              
-              let domain = 'wikipedia.org';
-              const domainEl = document.getElementById('wiki-domain');
-              try {
-                const urlObj = new URL(data.result.url);
-                domain = urlObj.hostname;
-                if (domainEl) domainEl.textContent = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname !== '/' ? urlObj.pathname : ''}`;
-              } catch(e) {
-                if (domainEl) domainEl.textContent = data.result.url;
-              }
-              
-              const favImg = document.getElementById('wiki-favicon');
-              if (favImg && favImg instanceof HTMLImageElement) {
-                favImg.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
-                favImg.style.display = 'block';
-                favImg.onerror = () => {
-                  favImg.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-                };
-              }
-              
-              const contentEl = document.getElementById('wiki-content');
-              if (contentEl) contentEl.innerHTML = data.result.content;
-              
-              const link = document.getElementById('wiki-link');
-              if (link && link instanceof HTMLAnchorElement) link.href = data.result.url;
-              
-              wikiCard.style.display = 'block';
-              wikiCard.classList.add('animate-fade-in-up');
-            }
-          })
-          .catch(e => console.error('Error fetching wiki:', e));
-      }
-    }
-  });
+function initWikiCard() {
+  const wikiCard = document.getElementById('wiki-card');
+  if (!wikiCard || wikiCard.dataset.loaded) return;
+  wikiCard.dataset.loaded = 'true';
+
+  const query = wikiCard.getAttribute('data-query');
+  const lang = wikiCard.getAttribute('data-lang');
+
+  if (query) {
+    fetch(`/api/wikipedia?q=${encodeURIComponent(query)}&lang=${encodeURIComponent(lang || 'es')}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.found && data.result) {
+          const titleEl = document.getElementById('wiki-title');
+          if (titleEl) titleEl.textContent = data.result.title;
+
+          let domain = 'wikipedia.org';
+          const domainEl = document.getElementById('wiki-domain');
+          try {
+            const urlObj = new URL(data.result.url);
+            domain = urlObj.hostname;
+            if (domainEl) domainEl.textContent = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname !== '/' ? urlObj.pathname : ''}`;
+          } catch(e) {
+            if (domainEl) domainEl.textContent = data.result.url;
+          }
+
+          const favImg = document.getElementById('wiki-favicon');
+          if (favImg && favImg instanceof HTMLImageElement) {
+            favImg.src = `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+            favImg.style.display = 'block';
+            favImg.onerror = () => {
+              favImg.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+            };
+          }
+
+          const contentEl = document.getElementById('wiki-content');
+          if (contentEl) contentEl.innerHTML = data.result.content;
+
+          const link = document.getElementById('wiki-link');
+          if (link && link instanceof HTMLAnchorElement) link.href = data.result.url;
+
+          wikiCard.style.display = 'block';
+          wikiCard.classList.add('animate-fade-in-up');
+        }
+      })
+      .catch(e => console.error('Error fetching wiki:', e));
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initWikiCard);
+} else {
+  initWikiCard();
+}
+document.addEventListener('astro:page-load', initWikiCard);
 </script>
 
 <style>
