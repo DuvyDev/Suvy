@@ -26,6 +26,11 @@ function getDb(): DatabaseSync {
       timestamp INTEGER NOT NULL,
       PRIMARY KEY (namespace, key)
     ) WITHOUT ROWID;
+
+    CREATE TABLE IF NOT EXISTS search_suggestions (
+      term TEXT PRIMARY KEY,
+      score INTEGER DEFAULT 1
+    ) WITHOUT ROWID;
   `);
   
   return db;
@@ -90,5 +95,37 @@ export function pruneCache(namespace: string, ttlMs: number, maxEntries: number)
       )
     `);
     delOverflow.run(namespace, namespace, toRemove);
+  }
+}
+
+export function getSuggestions(prefix: string, limit: number = 8): string[] {
+  const database = getDb();
+  const safePrefix = prefix.replace(/[%_]/g, '\\$&');
+  const stmt = database.prepare("SELECT term FROM search_suggestions WHERE term LIKE ? ESCAPE '\\' ORDER BY score DESC LIMIT ?");
+  const rows = stmt.all(`${safePrefix}%`, limit) as { term: string }[];
+  return rows.map(r => r.term);
+}
+
+export function addSuggestions(terms: string[], weight: number = 1): void {
+  if (!terms || terms.length === 0) return;
+  const database = getDb();
+  
+  const stmt = database.prepare(`
+    INSERT INTO search_suggestions (term, score) 
+    VALUES (?, ?) 
+    ON CONFLICT(term) DO UPDATE SET score = score + ?
+  `);
+  
+  try {
+    database.exec('BEGIN IMMEDIATE');
+    for (const term of terms) {
+      const clean = term.trim().toLowerCase();
+      if (clean && clean.length > 2) {
+        stmt.run(clean, weight, weight);
+      }
+    }
+    database.exec('COMMIT');
+  } catch (err) {
+    try { database.exec('ROLLBACK'); } catch {}
   }
 }

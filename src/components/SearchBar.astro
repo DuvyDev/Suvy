@@ -176,11 +176,15 @@ const t = getTranslation(langCookie);
 </style>
 
 <script is:inline>
-(function() {
+function initSearchBar() {
   const input = document.getElementById('search-input');
   const dropdown = document.getElementById('suggest-dropdown');
   const form = document.getElementById('search-form');
   if (!input || !dropdown || !form) return;
+
+  // Prevent multiple bindings if Astro runs this multiple times on the same element
+  if (input.dataset.suggestLoaded) return;
+  input.dataset.suggestLoaded = 'true';
 
   let debounceTimer = null;
   let activeIndex = -1;
@@ -230,7 +234,7 @@ const t = getTranslation(langCookie);
   }
 
   async function fetchSuggestions(query) {
-    if (query.length < 3) {
+    if (query.length < 1) {
       hideDropdown();
       return;
     }
@@ -254,7 +258,7 @@ const t = getTranslation(langCookie);
   input.addEventListener('input', function() {
     clearTimeout(debounceTimer);
     var q = input.value.trim();
-    if (q.length < 3) {
+    if (q.length < 1) {
       hideDropdown();
       return;
     }
@@ -290,9 +294,16 @@ const t = getTranslation(langCookie);
   });
 
   input.addEventListener('focus', function() {
-    if (input.value.trim().length >= 3 && suggestions.length > 0) {
+    if (input.value.trim().length >= 1 && suggestions.length > 0) {
       renderDropdown();
     }
   });
-})();
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initSearchBar);
+} else {
+  initSearchBar();
+}
+document.addEventListener('astro:page-load', initSearchBar);
 </script>

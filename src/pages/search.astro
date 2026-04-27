@@ -42,6 +42,17 @@ if (q) {
 const { results: items, localCount, hasMore, totalLocal, wikipediaResult, sitelinks, newsResults, mapResult } = results;
 const totalPages = Math.max(1, Math.ceil(totalLocal / 10));
 
+// Active Nourishment for Autocomplete (Async background fire-and-forget)
+if (q && items.length > 0) {
+  import('../lib/cache-db').then(({ addSuggestions }) => {
+    // Nourish the query itself with weight 5
+    addSuggestions([q], 5);
+    // Nourish the titles of the top 5 results with weight 1
+    const topTitles = items.slice(0, 5).map(r => r.title);
+    addSuggestions(topTitles, 1);
+  }).catch(err => console.error('Failed to nourish suggestions:', err));
+}
+
 function getPaginationRange(current: number, total: number): (number | '...')[] {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   
