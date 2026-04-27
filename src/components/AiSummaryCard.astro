@@ -75,6 +75,9 @@ const {
 </div>
 
 <script>
+import { marked } from 'marked';
+import DOMPurify from 'dompurify';
+
 function initAiSummary() {
   const card = document.getElementById('ai-summary-card');
   if (!card || card.dataset.loaded) return;
@@ -122,33 +125,12 @@ function initAiSummary() {
   const COLLAPSED_HEIGHT = 168; 
 
   function parseMarkdown(md: string): string {
-    let html = md;
-    html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => `<pre><code>${code.trim()}</code></pre>`);
-    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-    html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    html = html.replace(/^#### (.+)$/gm, '<h6>$1</h6>');
-    html = html.replace(/^### (.+)$/gm, '<h5>$1</h5>');
-    html = html.replace(/^## (.+)$/gm, '<h4>$1</h4>');
-    html = html.replace(/^# (.+)$/gm, '<h4>$1</h4>');
-    html = html.replace(/^---$/gm, '<hr>');
-    html = html.replace(/(?:^[-*] .+(?:\n|$))+/gm, (block) => {
-      const items = block.trim().split('\n').map(line => `<li>${line.replace(/^[-*] /, '')}</li>`).join('');
-      return `<ul>${items}</ul>`;
-    });
-    html = html.replace(/(?:^\d+\. .+(?:\n|$))+/gm, (block) => {
-      const items = block.trim().split('\n').map(line => `<li>${line.replace(/^\d+\. /, '')}</li>`).join('');
-      return `<ol>${items}</ol>`;
-    });
-    html = html.replace(/\n{2,}/g, '</p><p>');
-    html = html.replace(/\n/g, '<br>');
-    html = `<p>${html}</p>`;
-    html = html.replace(/<p>\s*<\/p>/g, '');
-    html = html.replace(/<p>\s*(<(?:ul|ol|pre|h[1-6]|hr))/g, '$1');
-    html = html.replace(/(<\/(?:ul|ol|pre|h[1-6])>|<hr>)\s*<\/p>/g, '$1');
-    return html;
+    try {
+      const rawHtml = marked.parse(md, { async: false, breaks: true, gfm: true }) as string;
+      return DOMPurify.sanitize(rawHtml);
+    } catch {
+      return md; // Fallback text in case of severe parsing error
+    }
   }
 
   function linkifyCitations(html: string): string {
@@ -521,6 +503,10 @@ document.addEventListener('astro:page-load', initAiSummary);
 .ai-summary-content :global(pre) { background: var(--button-bg); border: 1px solid var(--button-border); border-radius: 0.5rem; padding: 0.75em 1em; overflow-x: auto; margin: 0.5em 0; }
 .ai-summary-content :global(pre code) { background: none; border: none; padding: 0; }
 .ai-summary-content :global(hr) { border: none; border-top: 1px solid var(--button-border); margin: 0.75em 0; }
+.ai-summary-content :global(table) { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.85em; display: block; overflow-x: auto; }
+.ai-summary-content :global(th), .ai-summary-content :global(td) { padding: 0.6em 0.8em; border: 1px solid var(--button-border); text-align: left; }
+.ai-summary-content :global(th) { background: var(--button-bg); font-weight: 700; color: var(--text-color); }
+.ai-summary-content :global(tr:nth-child(even)) { background: rgba(128, 128, 128, 0.05); }
 
 .ai-summary-content :global(.ai-citation-link) {
   display: inline-flex;
@@ -658,6 +644,11 @@ document.addEventListener('astro:page-load', initAiSummary);
 }
 :global(.ai-chat-bubble.assistant pre code) { background: none; padding: 0; }
 :global(.ai-chat-bubble.assistant ul), :global(.ai-chat-bubble.assistant ol) { margin: 0.4em 0; padding-left: 1.5em; }
+:global(.ai-chat-bubble.assistant table) { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.85em; display: block; overflow-x: auto; }
+:global(.ai-chat-bubble.assistant th), :global(.ai-chat-bubble.assistant td) { padding: 0.6em 0.8em; border: 1px solid var(--button-border); text-align: left; }
+:global(.ai-chat-bubble.assistant th) { background: rgba(0,0,0,0.05); font-weight: 700; }
+:global(.ai-chat-bubble.assistant tr:nth-child(even)) { background: rgba(128, 128, 128, 0.05); }
+
 
 :global(.ai-chat-thinking) {
   font-style: italic;

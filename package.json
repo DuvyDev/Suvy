@@ -27,6 +27,11 @@
     "@tailwindcss/vite": "^4.2.4",
     "astro": "^6.1.8",
     "cheerio": "^1.2.0",
+    "dompurify": "^3.4.1",
+    "marked": "^18.0.2",
     "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@types/dompurify": "^3.0.5"
   }
 }
