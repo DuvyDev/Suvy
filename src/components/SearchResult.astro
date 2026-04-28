@@ -14,7 +14,7 @@ const { result, sitelinks = [], isFirst = false } = Astro.props;
 
 const domain = (() => {
   try {
-    return new URL(result.url).hostname;
+    return new URL(result.url).hostname.replace(/^www\./, '');
   } catch {
     return '';
   }
@@ -144,7 +144,7 @@ const crawlerApi = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
     {sitelinks.length > 0 ? (
       <Sitelinks links={sitelinks} />
     ) : isFirst ? (
-      <div id="async-sitelinks" data-domain={domain} data-exclude={result.url}></div>
+      <div class="async-sitelinks" data-domain={domain} data-exclude={result.url}></div>
     ) : null}
   </div>
 </div>
@@ -169,11 +169,56 @@ const crawlerApi = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
     color: inherit !important;
     font-weight: 600 !important;
   }
+
+  /* Sitelinks — must be global because elements are created dynamically by JS */
+  .sitelinks {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.4rem 1rem;
+    margin-top: 0.6rem;
+    padding-left: 0.25rem;
+  }
+  @media (max-width: 640px) {
+    .sitelinks {
+      grid-template-columns: 1fr;
+    }
+  }
+  .sitelink {
+    display: flex;
+    flex-direction: column;
+    padding: 0.35rem 0.5rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    transition: background 0.15s;
+    min-width: 0;
+  }
+  .sitelink:hover {
+    background: var(--button-border);
+  }
+  .sitelink-title {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--link-color);
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sitelink:hover .sitelink-title {
+    text-decoration: underline;
+  }
+  .sitelink-url {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 </style>
 
 <script>
 function initSearchResult() {
-  const container = document.getElementById('async-sitelinks');
+  const container = document.querySelector('.async-sitelinks');
   if (container && container.dataset.loaded) return;
   if (container) container.dataset.loaded = 'true';
 

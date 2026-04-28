@@ -10,7 +10,7 @@ import { searchCrawlerFull } from '../../lib/duvycrawl';
  */
 export const GET: APIRoute = async ({ url }) => {
   const query = url.searchParams.get('q') || '';
-  const domain = url.searchParams.get('domain') || '';
+  const domain = (url.searchParams.get('domain') || '').replace(/^www\./, '');
   const exclude = url.searchParams.get('exclude') || '';
 
   if (!query || !domain) {
