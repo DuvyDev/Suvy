@@ -405,10 +405,10 @@ function initAiSummary() {
             }
             renderContent();
             streamDone = true;
-            updateCollapse();
-            enableChat();
             card.style.display = 'block';
             card.classList.add('animate-fade-in-up');
+            updateCollapse();
+            enableChat();
           } else {
             skeleton.style.display = 'none';
           }
