@@ -6,6 +6,7 @@ import WikipediaCard from '../components/WikipediaCard.astro';
 import NewsCard from '../components/NewsCard.astro';
 import MapCard from '../components/MapCard.astro';
 import AiSummaryCard from '../components/AiSummaryCard.astro';
+import WeatherCard from '../components/WeatherCard.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import LanguageToggle from '../components/LanguageToggle.astro';
 import { search, type SearchOptions } from '../lib/search';
@@ -219,6 +220,9 @@ const activeAfter = truncMin(afterParam);
     ) : (
       <div class:list={['results-layout', { 'has-sidebar': !!(q || newsResults.length) }]}>
         <div class="results-main">
+              {q && (
+                <WeatherCard server:defer q={q} lang={langFilter || langCookie || 'es'} />
+              )}
               {q && items.length > 0 && (
                 <AiSummaryCard
                   query={q}

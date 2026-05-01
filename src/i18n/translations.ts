@@ -64,6 +64,10 @@ export const translations = {
   aiChatInputPlaceholder: 'Haz una pregunta de seguimiento...',
   aiChatSend: 'Enviar',
   aiChatThinking: 'Pensando...',
+  weather_humidity: 'Humedad',
+  weather_feelsLike: 'Sensación',
+  weather_wind: 'Viento',
+  weather_forecast: 'Pronóstico',
   },
   en: {
     searchPlaceholder: 'Search...',
@@ -128,6 +132,10 @@ export const translations = {
   aiChatInputPlaceholder: 'Ask a follow-up question...',
   aiChatSend: 'Send',
   aiChatThinking: 'Thinking...',
+  weather_humidity: 'Humidity',
+  weather_feelsLike: 'Feels like',
+  weather_wind: 'Wind',
+  weather_forecast: 'Forecast',
   }
 };
 

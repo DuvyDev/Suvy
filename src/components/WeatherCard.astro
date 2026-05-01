@@ -1,0 +1,272 @@
+---
+import { getTranslation } from '../i18n/translations';
+import { getWeather } from '../lib/weather';
+
+interface Props {
+  q: string;
+  lang: string;
+}
+
+const { q, lang } = Astro.props;
+const t = getTranslation(lang);
+
+const data = await getWeather(q, lang);
+if (!data) {
+  // Return empty string to render nothing if not a weather query or fetch fails
+  return;
+}
+
+// Helper to format dates
+function getDayName(dateStr: string, locale: string) {
+  const date = new Date(dateStr);
+  // open-meteo returns YYYY-MM-DD
+  // use UTC to avoid timezone shift on the date string
+  const utcDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+  return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(utcDate);
+}
+
+// Map WMO Weather codes to descriptive text and SVGs
+function getWeatherInfo(code: number, isDay: boolean = true) {
+  let icon = '';
+  let description = '';
+
+  if (code === 0) {
+    description = lang === 'es' ? 'Despejado' : 'Clear';
+    icon = isDay 
+      ? '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>'
+      : '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>'; // Moon
+  } else if (code === 1 || code === 2 || code === 3) {
+    description = lang === 'es' ? 'Nublado' : 'Cloudy';
+    icon = '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>';
+  } else if (code === 45 || code === 48) {
+    description = lang === 'es' ? 'Niebla' : 'Fog';
+    icon = '<path d="M4 12h16M4 8h16M4 16h16"/>'; // Align Justify / Fog
+  } else if (code >= 51 && code <= 67) {
+    description = lang === 'es' ? 'Lluvia' : 'Rain';
+    icon = '<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M16 14v6M8 14v6M12 16v6"/>';
+  } else if (code >= 71 && code <= 77) {
+    description = lang === 'es' ? 'Nieve' : 'Snow';
+    icon = '<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M8 15h.01M8 19h.01M12 17h.01M12 21h.01M16 15h.01M16 19h.01"/>';
+  } else if (code >= 80 && code <= 82) {
+    description = lang === 'es' ? 'Chubascos' : 'Showers';
+    icon = '<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M16 14v6M8 14v6M12 16v6"/>';
+  } else if (code >= 85 && code <= 86) {
+    description = lang === 'es' ? 'Tormenta de nieve' : 'Snow Showers';
+    icon = '<path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242M8 15h.01M8 19h.01M12 17h.01M12 21h.01M16 15h.01M16 19h.01"/>';
+  } else if (code >= 95 && code <= 99) {
+    description = lang === 'es' ? 'Tormenta eléctrica' : 'Thunderstorm';
+    icon = '<path d="M19 16.9A5 5 0 0 0 18 7h-1.26a8 8 0 1 0-11.62 9"/><polyline points="13 11 9 17 15 17 11 23"/>';
+  } else {
+    description = lang === 'es' ? 'Desconocido' : 'Unknown';
+    icon = '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>'; // Help
+  }
+
+  return { icon, description };
+}
+
+const currentInfo = getWeatherInfo(data.current.weatherCode, data.current.isDay);
+
+// Only show up to 4 days forecast
+const forecastDays = Math.min(4, data.daily.time.length);
+---
+
+<div class="weather-card animate-fade-in-up">
+  <div class="weather-header">
+    <div class="weather-main-info">
+      <div class="location-name">
+        <h2 class="text-xl font-bold">{data.locationName}</h2>
+        <span class="country-badge">{data.country}</span>
+      </div>
+      <div class="flex items-center gap-4 mt-2">
+        <div class="main-icon text-[var(--link-color)]">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" set:html={currentInfo.icon} />
+        </div>
+        <div>
+          <div class="temperature">{Math.round(data.current.temperature)}°C</div>
+          <div class="description">{currentInfo.description}</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="weather-details">
+      <div class="detail-item">
+        <span class="detail-label">{t.weather_feelsLike}</span>
+        <span class="detail-value">{Math.round(data.current.apparentTemperature)}°C</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">{t.weather_humidity}</span>
+        <span class="detail-value">{Math.round(data.current.humidity)}%</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">{t.weather_wind}</span>
+        <span class="detail-value">{Math.round(data.current.windSpeed)} km/h</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="weather-forecast">
+    {Array.from({ length: forecastDays }).map((_, i) => {
+      const isToday = i === 0;
+      const dayName = isToday ? (lang === 'es' ? 'Hoy' : 'Today') : getDayName(data.daily.time[i], lang);
+      const info = getWeatherInfo(data.daily.weatherCode[i]);
+      
+      return (
+        <div class="forecast-item">
+          <div class="forecast-day capitalize">{dayName}</div>
+          <div class="forecast-icon text-[var(--text-muted)]">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={info.icon} />
+          </div>
+          <div class="forecast-temps">
+            <span class="temp-max">{Math.round(data.daily.maxTemp[i])}°</span>
+            <span class="temp-min">{Math.round(data.daily.minTemp[i])}°</span>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+</div>
+
+<style>
+  .weather-card {
+    background: var(--card-bg);
+    border: 1px solid var(--button-border);
+    border-radius: 1.25rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .weather-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, #4285F4, #34A853);
+  }
+
+  .weather-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .location-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .location-name h2 {
+    color: var(--text-color);
+    margin: 0;
+  }
+
+  .country-badge {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.4rem;
+    border-radius: 0.4rem;
+    background: var(--button-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--button-border);
+  }
+
+  .temperature {
+    font-size: 3rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--text-color);
+    letter-spacing: -0.05em;
+  }
+
+  .description {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: capitalize;
+  }
+
+  .weather-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 120px;
+  }
+
+  .detail-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    font-size: 0.85rem;
+  }
+
+  .detail-label {
+    color: var(--text-muted);
+  }
+
+  .detail-value {
+    color: var(--text-color);
+    font-weight: 600;
+  }
+
+  .weather-forecast {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--button-border);
+  }
+
+  .forecast-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .forecast-day {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+
+  .forecast-temps {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+
+  .temp-max {
+    font-weight: 700;
+    color: var(--text-color);
+  }
+
+  .temp-min {
+    color: var(--text-muted);
+  }
+  
+  @media (max-width: 600px) {
+    .weather-header {
+      flex-direction: column;
+    }
+    .weather-details {
+      width: 100%;
+      flex-direction: row;
+      justify-content: space-between;
+      border-top: 1px solid var(--button-border);
+      padding-top: 1rem;
+    }
+    .detail-item {
+      flex-direction: column;
+      gap: 0.2rem;
+      align-items: center;
+    }
+  }
+</style>
