@@ -65,43 +65,72 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
 ---
 
 <div class="calendar-card animate-fade-in-up" data-lang={lang === 'es' ? 'es' : 'en'}>
-  <div class="cal-header">
-    <div class="flex items-center gap-2">
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--link-color)]">
+  <div class="cal-left">
+    <div class="cal-header">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--link-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
         <line x1="16" y1="2" x2="16" y2="6"/>
         <line x1="8" y1="2" x2="8" y2="6"/>
         <line x1="3" y1="10" x2="21" y2="10"/>
       </svg>
-      <span class="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.calendar_title}</span>
+      <span>{t.calendar_title}</span>
+    </div>
+
+    <div class="cal-control-group">
+      <label>{lang === 'es' ? 'MES' : 'MONTH'}</label>
+      <div class="cal-select-wrapper">
+        <div class="cal-select-mock">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span class="cal-sidebar-month">{monthName}</span>
+          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <select class="cal-real-select cal-month-select">
+          {(lang === 'es' ? MONTHS_ES : MONTHS_EN).map((mName, i) => (
+             <option value={i} selected={i === month}>{mName.charAt(0).toUpperCase() + mName.slice(1)}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <div class="cal-control-group">
+      <label>{lang === 'es' ? 'AÑO' : 'YEAR'}</label>
+      <div class="cal-select-wrapper">
+        <div class="cal-select-mock">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span class="cal-sidebar-year">{year}</span>
+          <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </div>
+        <select class="cal-real-select cal-year-select">
+          {Array.from({length: 21}, (_, i) => year - 10 + i).map(y => (
+             <option value={y} selected={y === year}>{y}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <div class="cal-actions">
+      <button class="cal-nav-btn" data-dir="prevYear" title={t.calendar_yearPrev || 'Previous year'}>«</button>
+      <button class="cal-nav-btn" data-dir="prev" title={t.calendar_prev || 'Previous month'}>‹</button>
+      <button class="cal-nav-btn" data-dir="next" title={t.calendar_next || 'Next month'}>›</button>
+      <button class="cal-nav-btn" data-dir="nextYear" title={t.calendar_yearNext || 'Next year'}>»</button>
     </div>
   </div>
 
-  <div class="cal-body">
-    <div class="cal-sidebar">
-      <div class="cal-nav-group">
-        <button class="cal-nav-btn" data-dir="prev" title={t.calendar_prev}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-        </button>
-        <span class="cal-sidebar-label cal-sidebar-month">{monthName}</span>
-        <button class="cal-nav-btn" data-dir="next" title={t.calendar_next}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-      </div>
-
-      <div class="cal-sidebar-divider"></div>
-
-      <div class="cal-nav-group">
-        <button class="cal-nav-btn" data-dir="prevYear" title={t.calendar_yearPrev}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-        </button>
-        <span class="cal-sidebar-label cal-sidebar-year">{year}</span>
-        <button class="cal-nav-btn" data-dir="nextYear" title={t.calendar_yearNext}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-      </div>
-    </div>
-
+  <div class="cal-right">
     <table class="cal-table">
       <thead>
         <tr>
@@ -130,13 +159,14 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     background: var(--card-bg);
     border: 1px solid var(--button-border);
     border-radius: 1.25rem;
-    padding: 1.25rem;
+    padding: 1.5rem;
     margin-bottom: 1.5rem;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
     backdrop-filter: blur(12px);
     overflow: hidden;
     position: relative;
-
+    display: flex;
+    gap: 1.5rem;
   }
   .calendar-card::before {
     content: '';
@@ -145,86 +175,116 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     width: 100%; height: 4px;
     background: linear-gradient(90deg, #EA4335, #FBBC05);
   }
-  .calendar-card .cal-header { margin-bottom: 0.75rem; }
-  .calendar-card .cal-body {
-    display: flex;
-    gap: 0.75rem;
-    align-items: flex-start;
-  }
-  .calendar-card .cal-sidebar {
+  .calendar-card .cal-left {
     display: flex;
     flex-direction: column;
+    min-width: 140px;
+    border-right: 1px solid var(--button-border);
+    padding-right: 1.5rem;
+  }
+  .calendar-card .cal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .calendar-card .cal-header span {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-color);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .calendar-card .cal-control-group {
+    margin-bottom: 1.5rem;
+  }
+  .calendar-card .cal-control-group label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .calendar-card .cal-select-wrapper {
+    position: relative;
+    cursor: pointer;
+  }
+  .calendar-card .cal-real-select {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  .calendar-card .cal-select-mock {
+    display: flex;
     align-items: center;
     gap: 0.4rem;
-    min-width: 56px;
-    flex-shrink: 0;
-    padding-top: 0.2rem;
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    padding: 0.5rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-color);
   }
-  .calendar-card .cal-nav-group {
+  .calendar-card .cal-select-mock svg.chevron {
+    margin-left: auto;
+    opacity: 0.5;
+  }
+  .calendar-card .cal-select-mock span {
+    text-transform: capitalize;
+  }
+  .calendar-card .cal-actions {
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.2rem;
+    gap: 0.4rem;
+    margin-top: auto;
   }
   .calendar-card .cal-nav-btn {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 1.6rem;
-    height: 1.6rem;
-    border-radius: 0.4rem;
     background: var(--button-bg);
     border: 1px solid var(--button-border);
+    color: var(--text-color);
+    height: 2rem;
+    border-radius: 0.4rem;
     cursor: pointer;
-    color: var(--text-muted);
-    transition: all 0.15s;
-    flex-shrink: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.2s;
   }
   .calendar-card .cal-nav-btn:hover {
     background: var(--button-hover);
     color: var(--link-color);
+    border-color: var(--link-color);
   }
-  .calendar-card .cal-sidebar-label {
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--text-color);
-    text-align: center;
-    line-height: 1.2;
-    text-transform: capitalize;
-  }
-  .calendar-card .cal-sidebar-year {
-    font-size: 0.85rem;
-    letter-spacing: -0.3px;
-  }
-  .calendar-card .cal-sidebar-divider {
-    width: 60%;
-    height: 1px;
-    background: var(--button-border);
-    opacity: 0.5;
+  .calendar-card .cal-right {
+    flex: 1;
   }
   .calendar-card .cal-table {
     width: 100%;
     table-layout: fixed;
     border-collapse: separate;
-    border-spacing: 2px;
+    border-spacing: 4px;
   }
   .calendar-card .cal-day-header {
     text-align: center;
     font-size: 0.75rem;
     font-weight: 600;
     color: var(--text-muted);
-    padding: 0.4rem 0;
-    width: calc(100% / 7);
+    padding: 0.4rem 0 1rem 0;
   }
   .calendar-card .cal-day {
     text-align: center;
     padding: 0;
-    border-radius: 0.5rem;
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: var(--text-color);
-    cursor: default;
-    transition: background 0.15s;
   }
   .calendar-card .cal-day span {
     display: flex;
@@ -235,13 +295,20 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     border-radius: 0.5rem;
     background: var(--button-bg);
     border: 1px solid transparent;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: default;
+    transition: all 0.15s;
   }
-  .calendar-card .cal-day:hover span {
+  .calendar-card .cal-day:not(.cal-empty):hover span {
     background: var(--button-hover);
     border-color: var(--button-border);
   }
-  .calendar-card .cal-empty { pointer-events: none; }
-  .calendar-card .cal-empty span { background: transparent; border-color: transparent; }
+  .calendar-card .cal-empty span {
+    background: transparent;
+    border-color: transparent;
+  }
   .calendar-card .cal-today span {
     background: var(--link-color);
     color: white;
@@ -250,12 +317,66 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
   }
   .calendar-card .cal-today:hover span {
     background: var(--link-color);
-    color: white;
+    filter: brightness(1.1);
   }
-  @media (max-width: 480px) {
-    .calendar-card .cal-sidebar { min-width: 48px; }
-    .calendar-card .cal-sidebar-label { font-size: 0.7rem; }
-    .calendar-card .cal-nav-btn { width: 1.4rem; height: 1.4rem; }
+  
+  @media (max-width: 640px) {
+    .calendar-card {
+      flex-direction: row;
+      padding: 1rem;
+      gap: 0.75rem;
+    }
+    .calendar-card .cal-left {
+      min-width: 100px;
+      padding-right: 0.75rem;
+      border-right: 1px solid var(--button-border);
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .calendar-card .cal-select-mock {
+      padding: 0.3rem 0.4rem;
+      font-size: 0.75rem;
+      gap: 0.2rem;
+    }
+    .calendar-card .cal-select-mock svg {
+      width: 12px;
+      height: 12px;
+    }
+    .calendar-card .cal-nav-btn {
+      height: 1.6rem;
+      font-size: 0.8rem;
+    }
+    .calendar-card .cal-day span {
+      font-size: 0.8rem;
+    }
+    .calendar-card .cal-day-header {
+      font-size: 0.65rem;
+      padding: 0.2rem 0 0.5rem 0;
+    }
+    .calendar-card .cal-header {
+      margin-bottom: 1rem;
+      gap: 0.3rem;
+    }
+    .calendar-card .cal-header span {
+      font-size: 0.75rem;
+    }
+    .calendar-card .cal-header svg {
+      width: 14px;
+      height: 14px;
+    }
+    .calendar-card .cal-control-group {
+      margin-bottom: 1rem;
+    }
+    .calendar-card .cal-control-group label {
+      font-size: 0.6rem;
+      margin-bottom: 0.4rem;
+    }
+    .calendar-card .cal-table {
+      border-spacing: 2px;
+    }
+    .calendar-card .cal-actions {
+      margin-top: auto;
+    }
   }
 </style>
 
@@ -299,6 +420,22 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     const yearEl = card.querySelector('.cal-sidebar-year');
     if (monthEl) monthEl.textContent = getMonthName(month, lang);
     if (yearEl) yearEl.textContent = year;
+
+    const monthSelect = card.querySelector('.cal-month-select');
+    if (monthSelect) monthSelect.value = month;
+
+    const yearSelect = card.querySelector('.cal-year-select');
+    if (yearSelect) {
+      yearSelect.innerHTML = '';
+      for (let i = year - 10; i <= year + 10; i++) {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = i;
+        if (i === year) opt.selected = true;
+        yearSelect.appendChild(opt);
+      }
+      yearSelect.value = year;
+    }
 
     const thead = card.querySelector('thead tr');
     thead.innerHTML = '';
@@ -364,6 +501,20 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
           else if (dir === 'next') { month++; if (month > 11) { month = 0; year++; } }
           else if (dir === 'prevYear') { year--; }
           else if (dir === 'nextYear') { year++; }
+          renderCalendar(card, month, year, lang);
+        });
+      });
+
+      card.querySelectorAll('.cal-month-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          month = parseInt(e.target.value, 10);
+          renderCalendar(card, month, year, lang);
+        });
+      });
+
+      card.querySelectorAll('.cal-year-select').forEach(sel => {
+        sel.addEventListener('change', (e) => {
+          year = parseInt(e.target.value, 10);
           renderCalendar(card, month, year, lang);
         });
       });

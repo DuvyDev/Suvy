@@ -32,6 +32,7 @@
   }
 
   .dark {
+    color-scheme: dark;
     --bg-color: #202124; /* Google Dark Grey */
     --text-color: #e8eaed; 
     --text-muted: #bdc1c6; 
