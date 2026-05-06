@@ -1,0 +1,359 @@
+---
+import { detectConversionQuery, getClientCategories, type ClientCategoryDef } from '../lib/convert';
+import { getTranslation } from '../i18n/translations';
+
+interface Props {
+  q: string;
+  lang: string;
+}
+
+const { q, lang } = Astro.props;
+const t = getTranslation(lang);
+
+const queryResult = detectConversionQuery(q, lang);
+if (!queryResult) return;
+
+const cats = getClientCategories(lang);
+const catsJson = JSON.stringify(cats);
+const prefillJson = JSON.stringify(queryResult);
+
+function niceDecimal(n: number): string {
+  if (Number.isInteger(n)) return n.toString();
+  const abs = Math.abs(n);
+  if (abs < 0.0001 || abs >= 1e12) return n.toExponential(4);
+  return parseFloat(n.toPrecision(10)).toString();
+}
+
+const accentGradients: Record<string, string> = {
+  length: 'linear-gradient(90deg, #4285F4, #7C3AED)',
+  time: 'linear-gradient(90deg, #EA4335, #FBBC05)',
+  temperature: 'linear-gradient(90deg, #EA4335, #4285F4)',
+  mass: 'linear-gradient(90deg, #34A853, #4285F4)',
+  volume: 'linear-gradient(90deg, #4285F4, #34A853)',
+  area: 'linear-gradient(90deg, #34A853, #7C3AED)',
+  speed: 'linear-gradient(90deg, #FBBC05, #EA4335)',
+  digital: 'linear-gradient(90deg, #7C3AED, #4285F4)',
+};
+
+const activeCat = queryResult.category || 'length';
+const gradient = accentGradients[activeCat] || accentGradients.length;
+---
+
+<div class="converter-card animate-fade-in-up" style={`--accent-gradient: ${gradient}`} data-cats={catsJson} data-prefill={prefillJson} data-lang={lang === 'es' ? 'es' : 'en'}>
+  <div class="conv-header">
+    <div class="flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--link-color)]">
+        <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+      </svg>
+      <span class="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.converter_title}</span>
+    </div>
+  </div>
+
+  <div class="conv-categories">
+    {cats.map(cat => (
+      <button class="conv-cat-btn" data-cat={cat.key} class:list={[cat.key === activeCat ? 'active' : '']}>
+        {cat.label[lang === 'es' ? 'es' : 'en']}
+      </button>
+    ))}
+  </div>
+
+  <div class="conv-body">
+    <div class="conv-row">
+      <div class="conv-field">
+        <input type="number" id="conv-input" class="conv-input" placeholder="1" min="0" step="any" value={queryResult.inputValue != null ? String(queryResult.inputValue) : '1'} />
+      </div>
+      <div class="conv-field">
+        <select id="conv-from" class="conv-select">
+          {cats.find(c => c.key === activeCat)?.units.map(u => (
+            <option value={u.short} selected={u.short === queryResult.fromUnit}>{u.label[lang === 'es' ? 'es' : 'en']}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <button id="conv-swap" class="conv-swap" aria-label="Swap units">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="7 11 12 6 17 11"/>
+        <polyline points="17 13 12 18 7 13"/>
+      </svg>
+    </button>
+
+    <div class="conv-row">
+      <div class="conv-field conv-result-field">
+        <div id="conv-output" class="conv-output">
+          {queryResult.mode === 'result' ? niceDecimal(queryResult.result!.outputValue) : '—'}
+        </div>
+      </div>
+      <div class="conv-field">
+        <select id="conv-to" class="conv-select">
+          {cats.find(c => c.key === activeCat)?.units.map(u => (
+            <option value={u.short} selected={u.short === queryResult.toUnit}>{u.label[lang === 'es' ? 'es' : 'en']}</option>
+          ))}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  {queryResult.mode === 'result' ? (
+    <div class="conv-formula">{queryResult.result!.formula}</div>
+  ) : null}
+</div>
+
+<style>
+  .converter-card {
+    background: var(--card-bg);
+    border: 1px solid var(--button-border);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+    position: relative;
+  }
+  .converter-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: var(--accent-gradient, linear-gradient(90deg, #4285F4, #34A853));
+  }
+  .conv-header { margin-bottom: 1rem; }
+  .conv-categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 1rem;
+  }
+  .conv-cat-btn {
+    padding: 0.3rem 0.7rem;
+    border-radius: 9999px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .conv-cat-btn:hover { background: var(--button-hover); color: var(--text-color); }
+  .conv-cat-btn.active {
+    background: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+  }
+  .conv-body {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .conv-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+  }
+  .conv-field {
+    position: relative;
+  }
+  .conv-input, .conv-select, .conv-output {
+    width: 100%;
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.65rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+  }
+  .conv-input:focus, .conv-select:focus {
+    outline: none;
+    border-color: var(--link-color);
+  }
+  .conv-input {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  .conv-select {
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+  }
+  .dark .conv-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23bdc1c6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
+  .conv-output {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--link-color);
+    display: flex;
+    align-items: center;
+    min-height: 2.9rem;
+    word-break: break-all;
+  }
+  .conv-result-field { min-width: 0; }
+  .conv-swap {
+    flex-shrink: 0;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    cursor: pointer;
+    color: var(--link-color);
+    transition: all 0.15s;
+  }
+  .conv-swap:hover {
+    background: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+    transform: rotate(180deg);
+  }
+  .conv-formula {
+    margin-top: 0.75rem;
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+  @media (max-width: 480px) {
+    .conv-body { flex-direction: column; }
+    .conv-swap { transform: rotate(90deg); }
+    .conv-swap:hover { transform: rotate(270deg); }
+  }
+</style>
+
+<script is:inline>
+(function() {
+  function initConverters() {
+    document.querySelectorAll('.converter-card').forEach(card => {
+      if (card.dataset.convLoaded) return;
+      card.dataset.convLoaded = 'true';
+
+      const lang = card.dataset.lang || 'en';
+      const cats = JSON.parse(card.dataset.cats);
+      const prefill = JSON.parse(card.dataset.prefill);
+
+      const input = card.querySelector('#conv-input');
+      const fromSel = card.querySelector('#conv-from');
+      const toSel = card.querySelector('#conv-to');
+      const output = card.querySelector('#conv-output');
+      const swapBtn = card.querySelector('#conv-swap');
+      const catBtns = card.querySelectorAll('.conv-cat-btn');
+      const formulaEl = card.querySelector('.conv-formula');
+
+      if (!input || !fromSel || !toSel || !output) return;
+
+      function getCurrentCat() {
+        return cats.find(c => c.key === card.querySelector('.conv-cat-btn.active')?.dataset.cat);
+      }
+
+      function convert() {
+        const cat = getCurrentCat();
+        if (!cat) return;
+        const val = parseFloat(input.value);
+        const from = fromSel.value;
+        const to = toSel.value;
+
+        if (isNaN(val) || val < 0) { output.textContent = '—'; if (formulaEl) formulaEl.textContent = ''; return; }
+
+        let result;
+        if (cat.isTemperature) {
+          let kelvin;
+          if (from === 'C') kelvin = val + 273.15;
+          else if (from === 'F') kelvin = (val - 32) * 5 / 9 + 273.15;
+          else kelvin = val;
+          if (to === 'C') result = kelvin - 273.15;
+          else if (to === 'F') result = (kelvin - 273.15) * 9 / 5 + 32;
+          else result = kelvin;
+        } else {
+          const fromU = cat.units.find(u => u.short === from);
+          const toU = cat.units.find(u => u.short === to);
+          if (!fromU || !toU) { output.textContent = '—'; return; }
+          result = val * fromU.factor / toU.factor;
+        }
+
+        let display;
+        if (Number.isInteger(result)) display = result.toString();
+        else {
+          const abs = Math.abs(result);
+          if (abs < 0.0001 || abs >= 1e12) display = result.toExponential(4);
+          else display = parseFloat(result.toPrecision(10)).toString();
+        }
+        output.textContent = display;
+
+        if (formulaEl) {
+          const fromLabel = cat.units.find(u => u.short === from)?.label[lang] || from;
+          const toLabel = cat.units.find(u => u.short === to)?.label[lang] || to;
+          formulaEl.textContent = `${val} ${fromLabel} = ${display} ${toLabel}`;
+        }
+      }
+
+      function populateSelects(cat) {
+        const key = (lang === 'es' ? 'es' : 'en');
+        fromSel.innerHTML = '';
+        toSel.innerHTML = '';
+        cat.units.forEach(u => {
+          const opt1 = document.createElement('option');
+          opt1.value = u.short;
+          opt1.textContent = u.label[key];
+          fromSel.appendChild(opt1);
+          const opt2 = document.createElement('option');
+          opt2.value = u.short;
+          opt2.textContent = u.label[key];
+          toSel.appendChild(opt2);
+        });
+        fromSel.value = cat.units[0].short;
+        toSel.value = cat.units.length > 1 ? cat.units[1].short : cat.units[0].short;
+        convert();
+      }
+
+      catBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          catBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const catKey = btn.dataset.cat;
+          const cat = cats.find(c => c.key === catKey);
+          if (cat) populateSelects(cat);
+        });
+      });
+
+      input.addEventListener('input', convert);
+      fromSel.addEventListener('change', convert);
+      toSel.addEventListener('change', convert);
+
+      swapBtn.addEventListener('click', () => {
+        const tmp = fromSel.value;
+        fromSel.value = toSel.value;
+        toSel.value = tmp;
+        convert();
+      });
+
+      if (prefill.category && prefill.fromUnit && prefill.toUnit) {
+        const activeBtn = card.querySelector(`.conv-cat-btn[data-cat="${prefill.category}"]`);
+        if (activeBtn) activeBtn.click();
+        setTimeout(() => {
+          if (fromSel.querySelector(`option[value="${prefill.fromUnit}"]`)) fromSel.value = prefill.fromUnit;
+          if (toSel.querySelector(`option[value="${prefill.toUnit}"]`)) toSel.value = prefill.toUnit;
+          if (prefill.inputValue != null) input.value = prefill.inputValue;
+          convert();
+        }, 10);
+      }
+    });
+  }
+
+  initConverters();
+  document.addEventListener('astro:page-load', initConverters);
+})();
+</script>

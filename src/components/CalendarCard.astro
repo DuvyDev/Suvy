@@ -1,0 +1,376 @@
+---
+import { getTranslation } from '../i18n/translations';
+
+interface Props {
+  q: string;
+  lang: string;
+}
+
+const { q, lang } = Astro.props;
+const t = getTranslation(lang);
+
+const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const MONTHS_EN = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+
+const CAL_KEYWORD = /^(?:calendario|calendar|cal)$/i;
+const MONTH_YEAR = new RegExp(
+  `^(?:calendario|calendar|cal)?\\s*(?:(${MONTHS_ES.join('|')}|${MONTHS_EN.join('|')}))?\\s*(\\d{4})?$`,
+  'i'
+);
+
+const match = q.trim().match(MONTH_YEAR);
+if (!match || (!match[1] && !match[2] && !CAL_KEYWORD.test(q.trim()))) return;
+
+const now = new Date();
+let month = now.getMonth();
+let year = now.getFullYear();
+
+if (match[1]) {
+  const rawMonth = match[1].toLowerCase();
+  let idx = MONTHS_EN.indexOf(rawMonth);
+  if (idx === -1) idx = MONTHS_ES.indexOf(rawMonth);
+  if (idx !== -1) month = idx;
+}
+
+if (match[2]) {
+  year = parseInt(match[2], 10);
+}
+
+function buildCalendar(m: number, yr: number): { weeks: (number | null)[][]; today: number } {
+  const firstDay = new Date(yr, m, 1).getDay();
+  const daysInMonth = new Date(yr, m + 1, 0).getDate();
+  const adjustedFirst = firstDay === 0 ? 7 : firstDay;
+
+  const weeks: (number | null)[][] = [];
+  let week: (number | null)[] = [];
+  for (let i = 1; i < adjustedFirst; i++) week.push(null);
+  for (let d = 1; d <= daysInMonth; d++) {
+    week.push(d);
+    if (week.length === 7) { weeks.push(week); week = []; }
+  }
+  while (week.length < 7) week.push(null);
+  if (week.some(d => d !== null)) weeks.push(week);
+
+  const today = now.getMonth() === m && now.getFullYear() === yr ? now.getDate() : -1;
+  return { weeks, today };
+}
+
+const cal = buildCalendar(month, year);
+
+const monthName = new Date(year, month, 1).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { month: 'long' });
+
+const dayNamesES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+const dayNamesEN = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
+---
+
+<div class="calendar-card animate-fade-in-up" data-lang={lang === 'es' ? 'es' : 'en'}>
+  <div class="cal-header">
+    <div class="flex items-center gap-2">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--link-color)]">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span class="text-sm font-semibold text-[var(--text-muted)] uppercase tracking-wide">{t.calendar_title}</span>
+    </div>
+  </div>
+
+  <div class="cal-body">
+    <div class="cal-sidebar">
+      <div class="cal-nav-group">
+        <button class="cal-nav-btn" data-dir="prev" title={t.calendar_prev}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <span class="cal-sidebar-label cal-sidebar-month">{monthName}</span>
+        <button class="cal-nav-btn" data-dir="next" title={t.calendar_next}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+
+      <div class="cal-sidebar-divider"></div>
+
+      <div class="cal-nav-group">
+        <button class="cal-nav-btn" data-dir="prevYear" title={t.calendar_yearPrev}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+        </button>
+        <span class="cal-sidebar-label cal-sidebar-year">{year}</span>
+        <button class="cal-nav-btn" data-dir="nextYear" title={t.calendar_yearNext}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <table class="cal-table">
+      <thead>
+        <tr>
+          {dayNames.map(d => <th class="cal-day-header">{d}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {cal.weeks.map(week => (
+          <tr>
+            {week.map(d => d !== null ? (
+              <td class:list={['cal-day', d === cal.today ? 'cal-today' : '']}>
+                <span>{d}</span>
+              </td>
+            ) : (
+              <td class="cal-day cal-empty"></td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<style is:global>
+  .calendar-card {
+    background: var(--card-bg);
+    border: 1px solid var(--button-border);
+    border-radius: 1.25rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+    position: relative;
+
+  }
+  .calendar-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 4px;
+    background: linear-gradient(90deg, #EA4335, #FBBC05);
+  }
+  .calendar-card .cal-header { margin-bottom: 0.75rem; }
+  .calendar-card .cal-body {
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+  }
+  .calendar-card .cal-sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 56px;
+    flex-shrink: 0;
+    padding-top: 0.2rem;
+  }
+  .calendar-card .cal-nav-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+  }
+  .calendar-card .cal-nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 0.4rem;
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .calendar-card .cal-nav-btn:hover {
+    background: var(--button-hover);
+    color: var(--link-color);
+  }
+  .calendar-card .cal-sidebar-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--text-color);
+    text-align: center;
+    line-height: 1.2;
+    text-transform: capitalize;
+  }
+  .calendar-card .cal-sidebar-year {
+    font-size: 0.85rem;
+    letter-spacing: -0.3px;
+  }
+  .calendar-card .cal-sidebar-divider {
+    width: 60%;
+    height: 1px;
+    background: var(--button-border);
+    opacity: 0.5;
+  }
+  .calendar-card .cal-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 2px;
+  }
+  .calendar-card .cal-day-header {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 0.4rem 0;
+    width: calc(100% / 7);
+  }
+  .calendar-card .cal-day {
+    text-align: center;
+    padding: 0;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-color);
+    cursor: default;
+    transition: background 0.15s;
+  }
+  .calendar-card .cal-day span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 0.5rem;
+    background: var(--button-bg);
+    border: 1px solid transparent;
+  }
+  .calendar-card .cal-day:hover span {
+    background: var(--button-hover);
+    border-color: var(--button-border);
+  }
+  .calendar-card .cal-empty { pointer-events: none; }
+  .calendar-card .cal-empty span { background: transparent; border-color: transparent; }
+  .calendar-card .cal-today span {
+    background: var(--link-color);
+    color: white;
+    font-weight: 700;
+    border-color: var(--link-color);
+  }
+  .calendar-card .cal-today:hover span {
+    background: var(--link-color);
+    color: white;
+  }
+  @media (max-width: 480px) {
+    .calendar-card .cal-sidebar { min-width: 48px; }
+    .calendar-card .cal-sidebar-label { font-size: 0.7rem; }
+    .calendar-card .cal-nav-btn { width: 1.4rem; height: 1.4rem; }
+  }
+</style>
+
+<script is:inline>
+(function() {
+  const MONTHS_EN = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  function getMonthName(m, lang) {
+    return new Date(2000, m, 1).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { month: 'long' });
+  }
+
+  function getDayNames(lang) {
+    if (lang === 'es') return ['L','M','X','J','V','S','D'];
+    return ['S','M','T','W','T','F','S'];
+  }
+
+  function buildCalendarHTML(m, yr) {
+    const firstDay = new Date(yr, m, 1).getDay();
+    const daysInMonth = new Date(yr, m + 1, 0).getDate();
+    const adjustedFirst = firstDay === 0 ? 7 : firstDay;
+    const weeks = [];
+    let week = [];
+    for (let i = 1; i < adjustedFirst; i++) week.push(null);
+    for (let d = 1; d <= daysInMonth; d++) {
+      week.push(d);
+      if (week.length === 7) { weeks.push(week); week = []; }
+    }
+    while (week.length < 7) week.push(null);
+    if (week.some(d => d !== null)) weeks.push(week);
+    return weeks;
+  }
+
+  function renderCalendar(card, month, year, lang) {
+    const weeks = buildCalendarHTML(month, year);
+    const dayNames = getDayNames(lang);
+    const now = new Date();
+    const today = now.getMonth() === month && now.getFullYear() === year ? now.getDate() : -1;
+
+    const monthEl = card.querySelector('.cal-sidebar-month');
+    const yearEl = card.querySelector('.cal-sidebar-year');
+    if (monthEl) monthEl.textContent = getMonthName(month, lang);
+    if (yearEl) yearEl.textContent = year;
+
+    const thead = card.querySelector('thead tr');
+    thead.innerHTML = '';
+    dayNames.forEach(d => {
+      const th = document.createElement('th');
+      th.className = 'cal-day-header';
+      th.textContent = d;
+      thead.appendChild(th);
+    });
+
+    const tbody = card.querySelector('tbody');
+    tbody.innerHTML = '';
+    weeks.forEach(week => {
+      const tr = document.createElement('tr');
+      week.forEach(d => {
+        const td = document.createElement('td');
+        td.className = 'cal-day';
+        if (d === null) {
+          td.classList.add('cal-empty');
+        } else {
+          const span = document.createElement('span');
+          span.textContent = d;
+          td.appendChild(span);
+          if (d === today) td.classList.add('cal-today');
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    card._calMonth = month;
+    card._calYear = year;
+  }
+
+  function initCalendars() {
+    document.querySelectorAll('.calendar-card').forEach(card => {
+      if (card.dataset.calLoaded) return;
+      card.dataset.calLoaded = 'true';
+
+      const lang = card.dataset.lang === 'es' ? 'es' : 'en';
+
+      let month = new Date().getMonth();
+      let year = new Date().getFullYear();
+
+      const monthEl = card.querySelector('.cal-sidebar-month');
+      const yearEl = card.querySelector('.cal-sidebar-year');
+      if (monthEl && yearEl) {
+        const mName = monthEl.textContent?.toLowerCase() || '';
+        let mIdx = MONTHS_EN.indexOf(mName);
+        if (mIdx === -1) mIdx = MONTHS_ES.indexOf(mName);
+        if (mIdx !== -1) month = mIdx;
+        const y = parseInt(yearEl.textContent || '', 10);
+        if (!isNaN(y)) year = y;
+      }
+
+      card._calMonth = month;
+      card._calYear = year;
+
+      card.querySelectorAll('.cal-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const dir = btn.dataset.dir;
+          if (dir === 'prev') { month--; if (month < 0) { month = 11; year--; } }
+          else if (dir === 'next') { month++; if (month > 11) { month = 0; year++; } }
+          else if (dir === 'prevYear') { year--; }
+          else if (dir === 'nextYear') { year++; }
+          renderCalendar(card, month, year, lang);
+        });
+      });
+    });
+  }
+
+  initCalendars();
+  document.addEventListener('astro:page-load', initCalendars);
+})();
+</script>
