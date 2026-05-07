@@ -3,9 +3,11 @@ export interface Props {
   query: string;
   lang: string;
   results: { title: string; content: string; url: string }[];
+  mode: 'auto' | 'button';
   label: string;
   disclaimer: string;
   loadingText: string;
+  buttonPrompt?: string;
   readMore?: string;
   readLess?: string;
   chatPlaceholder?: string;
@@ -16,10 +18,12 @@ export interface Props {
 const { 
   query, 
   lang, 
-  results, 
+  results,
+  mode,
   label, 
   disclaimer, 
-  loadingText, 
+  loadingText,
+  buttonPrompt = 'Summarize with AI',
   readMore = 'Read more', 
   readLess = 'Read less',
   chatPlaceholder = 'Ask a follow-up question...',
@@ -28,7 +32,7 @@ const {
 } = Astro.props;
 ---
 
-<div class="ai-summary-card" id="ai-summary-card" style="display: none;" data-query={query} data-lang={lang} data-results={JSON.stringify(results)} data-read-more={readMore} data-read-less={readLess} data-chat-placeholder={chatPlaceholder} data-chat-send={chatSend} data-chat-thinking={chatThinking}>
+<div class="ai-summary-card" id="ai-summary-card" style="display: none;" data-query={query} data-lang={lang} data-results={JSON.stringify(results)} data-mode={mode} data-read-more={readMore} data-read-less={readLess} data-chat-placeholder={chatPlaceholder} data-chat-send={chatSend} data-chat-thinking={chatThinking}>
   <div class="ai-summary-header">
     <svg class="ai-summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
@@ -59,6 +63,15 @@ const {
   <span class="ai-summary-disclaimer">{disclaimer}</span>
 </div>
 
+<div class="ai-summary-button" id="ai-summary-button" style="display: none;" data-button-prompt={buttonPrompt}>
+  <button id="ai-summary-btn" class="ai-summary-btn-trigger">
+    <svg class="ai-summary-btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+    </svg>
+    <span id="ai-summary-btn-label"></span>
+  </button>
+</div>
+
 <div class="ai-summary-skeleton" id="ai-summary-skeleton" style="display: none;">
   <div class="ai-summary-header">
     <svg class="ai-summary-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -84,13 +97,13 @@ function initAiSummary() {
   card.dataset.loaded = 'true';
 
   const skeleton = document.getElementById('ai-summary-skeleton');
+  const buttonEl = document.getElementById('ai-summary-button');
   const contentEl = document.getElementById('ai-summary-content');
   const bodyEl = document.getElementById('ai-summary-body');
   const fadeEl = document.getElementById('ai-summary-fade');
   const readMoreBtn = document.getElementById('ai-summary-read-more') as HTMLButtonElement | null;
   const sourcesEl = document.getElementById('ai-summary-sources');
   
-  // Chat Elements
   const chatContainer = document.getElementById('ai-chat-container');
   const chatHistoryEl = document.getElementById('ai-chat-history');
   const chatForm = document.getElementById('ai-chat-form') as HTMLFormElement;
@@ -101,6 +114,8 @@ function initAiSummary() {
 
   const query = card.getAttribute('data-query');
   const lang = card.getAttribute('data-lang') || 'en';
+  const mode = card.getAttribute('data-mode') || 'auto';
+  const buttonPrompt = card.getAttribute('data-button-prompt') || 'Summarize with AI';
   const readMoreLabel = card.getAttribute('data-read-more') || 'Read more';
   const readLessLabel = card.getAttribute('data-read-less') || 'Read less';
   const chatThinkingLabel = card.getAttribute('data-chat-thinking') || 'Thinking...';
@@ -111,11 +126,9 @@ function initAiSummary() {
   } catch { return; }
 
   if (!query || results.length === 0) {
-    skeleton.style.display = 'none';
+    if (buttonEl) buttonEl.style.display = 'none';
     return;
   }
-
-  skeleton.style.display = 'block';
 
   let sourcesList: { title: string; url: string }[] = [];
   let rawText = '';
@@ -129,7 +142,7 @@ function initAiSummary() {
       const rawHtml = marked.parse(md, { async: false, breaks: true, gfm: true }) as string;
       return DOMPurify.sanitize(rawHtml);
     } catch {
-      return md; // Fallback text in case of severe parsing error
+      return md;
     }
   }
 
@@ -209,12 +222,10 @@ function initAiSummary() {
       a.rel = 'noopener noreferrer';
       sourcesEl.appendChild(a);
     });
-    // Let updateCollapse control visibility
     renderContent();
   }
 
   function enableChat() {
-    // updateCollapse will evaluate whether chatContainer should be shown
     updateCollapse();
   }
 
@@ -223,7 +234,6 @@ function initAiSummary() {
     const userMessage = chatInput.value.trim();
     if (!userMessage) return;
 
-    // Push and render user message
     chatHistory.push({ role: 'user', content: userMessage });
     
     const userBubble = document.createElement('div');
@@ -235,13 +245,11 @@ function initAiSummary() {
     chatInput.disabled = true;
     chatSubmitBtn.disabled = true;
 
-    // Create assistant bubble with thinking placeholder
     const assistantBubble = document.createElement('div');
     assistantBubble.className = 'ai-chat-bubble assistant ai-summary-content';
     assistantBubble.innerHTML = `<span class="ai-chat-thinking">${chatThinkingLabel}</span>`;
     chatHistoryEl!.appendChild(assistantBubble);
     
-    // Scroll to bottom
     chatHistoryEl!.scrollTop = chatHistoryEl!.scrollHeight;
 
     try {
@@ -294,7 +302,6 @@ function initAiSummary() {
             if (json.text) {
               currentAssistantRawText += json.text;
               assistantBubble.innerHTML = linkifyCitations(parseMarkdown(currentAssistantRawText));
-              // Auto scroll while typing
               chatHistoryEl!.scrollTop = chatHistoryEl!.scrollHeight;
             }
           } catch {}
@@ -309,115 +316,130 @@ function initAiSummary() {
     }
   });
 
-  fetch('/api/ai-summary', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ q: query, lang, results }),
-  })
-    .then((response) => {
-      const contentType = response.headers.get('content-type') || '';
+  function startStreaming() {
+    skeleton.style.display = 'block';
+    if (buttonEl) buttonEl.style.display = 'none';
 
-      if (contentType.includes('text/event-stream')) {
-        skeleton.style.display = 'none';
-        card.style.display = 'block';
-        card.classList.add('animate-fade-in-up');
+    fetch('/api/ai-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ q: query, lang, results }),
+    })
+      .then((response) => {
+        const contentType = response.headers.get('content-type') || '';
 
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error('No reader');
+        if (contentType.includes('text/event-stream')) {
+          skeleton.style.display = 'none';
+          card.style.display = 'block';
+          card.classList.add('animate-fade-in-up');
 
-        const decoder = new TextDecoder();
-        let buffer = '';
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error('No reader');
 
-        function read(): void {
-          reader!.read().then(({ done, value }) => {
-            if (done) {
-              processBuffer(true);
-              return;
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          function read(): void {
+            reader!.read().then(({ done, value }) => {
+              if (done) {
+                processBuffer(true);
+                return;
+              }
+              buffer += decoder.decode(value, { stream: true });
+              processBuffer(false);
+              read();
+            }).catch(() => {
+              skeleton.style.display = 'none';
+            });
+          }
+
+          function processBuffer(isDone: boolean): void {
+            const lines = buffer.split('\n');
+            buffer = isDone ? '' : (lines.pop() || '');
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed === 'data: [DONE]') continue;
+              if (!trimmed.startsWith('data: ')) continue;
+
+              try {
+                const json = JSON.parse(trimmed.slice(6));
+                if (json.text) {
+                  rawText += json.text;
+                  renderContent();
+                  updateCollapse();
+                }
+                if (json.sources && Array.isArray(json.sources)) {
+                  renderSources(json.sources);
+                }
+                if (json.summary && json.found) {
+                  rawText = json.summary;
+                  if (json.sources) renderSources(json.sources);
+                  renderContent();
+                  skeleton.style.display = 'none';
+                  card.style.display = 'block';
+                  if (!card.classList.contains('animate-fade-in-up')) {
+                    card.classList.add('animate-fade-in-up');
+                  }
+                }
+              } catch {
+                // Skip malformed
+              }
             }
-            buffer += decoder.decode(value, { stream: true });
-            processBuffer(false);
-            read();
-          }).catch(() => {
-            skeleton.style.display = 'none';
+
+            if (isDone) {
+              streamDone = true;
+              const contextText = `Original search query: ${query}\n\nSearch results context provided to you earlier:\n` + 
+                results.map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`).join('\n\n');
+              chatHistory.push({ role: 'user', content: contextText });
+              chatHistory.push({ role: 'assistant', content: rawText });
+              renderContent();
+              updateCollapse();
+              enableChat();
+            }
+          }
+
+          read();
+        } else {
+          return response.json().then((data) => {
+            if (data.found && data.summary) {
+              skeleton.style.display = 'none';
+              rawText = data.summary;
+              const contextText = `Original search query: ${query}\n\nSearch results context provided to you earlier:\n` + 
+                results.map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`).join('\n\n');
+              chatHistory.push({ role: 'user', content: contextText });
+              chatHistory.push({ role: 'assistant', content: rawText });
+              if (data.sources && data.sources.length > 0) {
+                renderSources(data.sources);
+              }
+              renderContent();
+              streamDone = true;
+              card.style.display = 'block';
+              card.classList.add('animate-fade-in-up');
+              updateCollapse();
+              enableChat();
+            } else {
+              skeleton.style.display = 'none';
+            }
           });
         }
+      })
+      .catch(() => {
+        skeleton.style.display = 'none';
+      });
+  }
 
-        function processBuffer(isDone: boolean): void {
-          const lines = buffer.split('\n');
-          buffer = isDone ? '' : (lines.pop() || '');
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed || trimmed === 'data: [DONE]') continue;
-            if (!trimmed.startsWith('data: ')) continue;
-
-            try {
-              const json = JSON.parse(trimmed.slice(6));
-              if (json.text) {
-                rawText += json.text;
-                renderContent();
-                updateCollapse();
-              }
-              if (json.sources && Array.isArray(json.sources)) {
-                renderSources(json.sources);
-              }
-              if (json.summary && json.found) {
-                rawText = json.summary;
-                if (json.sources) renderSources(json.sources);
-                renderContent();
-                skeleton.style.display = 'none';
-                card.style.display = 'block';
-                if (!card.classList.contains('animate-fade-in-up')) {
-                  card.classList.add('animate-fade-in-up');
-                }
-              }
-            } catch {
-              // Skip malformed
-            }
-          }
-
-          if (isDone) {
-            streamDone = true;
-            // Inject the original context so the AI remembers the search results during the chat
-            const contextText = `Original search query: ${query}\n\nSearch results context provided to you earlier:\n` + 
-              results.map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`).join('\n\n');
-            chatHistory.push({ role: 'user', content: contextText });
-            chatHistory.push({ role: 'assistant', content: rawText });
-            renderContent();
-            updateCollapse();
-            enableChat();
-          }
-        }
-
-        read();
-      } else {
-        return response.json().then((data) => {
-          if (data.found && data.summary) {
-            skeleton.style.display = 'none';
-            rawText = data.summary;
-            // Inject the original context so the AI remembers the search results during the chat
-            const contextText = `Original search query: ${query}\n\nSearch results context provided to you earlier:\n` + 
-              results.map((r, i) => `[${i + 1}] ${r.title}\n${r.content}`).join('\n\n');
-            chatHistory.push({ role: 'user', content: contextText });
-            chatHistory.push({ role: 'assistant', content: rawText });
-            if (data.sources && data.sources.length > 0) {
-              renderSources(data.sources);
-            }
-            renderContent();
-            streamDone = true;
-            card.style.display = 'block';
-            card.classList.add('animate-fade-in-up');
-            updateCollapse();
-            enableChat();
-          } else {
-            skeleton.style.display = 'none';
-          }
-        });
-      }
-    })
-    .catch(() => {
-      skeleton.style.display = 'none';
-    });
+  if (mode === 'button') {
+    const label = document.getElementById('ai-summary-btn-label');
+    const btn = document.getElementById('ai-summary-btn');
+    if (buttonEl && label && btn) {
+      label.textContent = buttonPrompt;
+      buttonEl.style.display = 'block';
+      btn.addEventListener('click', () => startStreaming(), { once: true });
+    }
+  } else {
+    startStreaming();
+  }
 }
 
 if (document.readyState === 'loading') {
@@ -745,6 +767,40 @@ document.addEventListener('astro:page-load', initAiSummary);
   box-shadow: var(--search-shadow);
   margin-bottom: 0.75rem;
 }
+
+/* ── Button mode placeholder ── */
+.ai-summary-button {
+  background: var(--card-bg);
+  border: 1px solid var(--search-border);
+  border-left: 3px solid var(--link-color);
+  border-radius: 1.25rem;
+  padding: 0.85rem 1.25rem;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--search-shadow);
+  margin-bottom: 0.75rem;
+}
+.ai-summary-btn-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--link-color);
+  padding: 0;
+  transition: opacity 0.2s;
+}
+.ai-summary-btn-trigger:hover {
+  opacity: 0.8;
+}
+.ai-summary-btn-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex-shrink: 0;
+}
+
 .ai-summary-loading-text {
   font-size: 0.75rem;
   color: var(--text-muted);

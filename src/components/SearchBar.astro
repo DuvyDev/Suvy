@@ -31,6 +31,9 @@ const t = getTranslation(langCookie);
         autocomplete="off"
         autofocus={autoFocus}
       />
+      <button type="button" aria-label="Clear" id="search-clear" class="search-clear" style={value ? '' : 'display:none;'}>
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
       <button type="submit" aria-label="Search" class="search-btn">
         <svg class="w-6 h-6 text-[var(--link-color)]" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
            <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
@@ -60,20 +63,21 @@ const t = getTranslation(langCookie);
     border: 1px solid var(--search-border);
     background: var(--search-bg);
     backdrop-filter: blur(12px);
-    box-shadow: var(--search-shadow);
     padding: 0 1.25rem;
     margin-top: 1.5rem;
     transition: all 0.3s ease;
   }
+  .search-container.compact {
+    margin-top: 0;
+  }
 
   .search-container:hover {
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-color: var(--search-border-hover, var(--search-ring));
   }
 
   .search-container:focus-within {
-    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-    ring: 2px;
     border-color: var(--search-ring);
+    background: var(--bg-color);
   }
 
   .search-container.has-suggestions {
@@ -116,6 +120,24 @@ const t = getTranslation(langCookie);
   }
 
   .search-btn:hover {
+    background: var(--button-border);
+  }
+
+  .search-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.35rem;
+    border-radius: 50%;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    transition: all 0.2s;
+    margin-right: 0.25rem;
+  }
+  .search-clear:hover {
+    color: var(--text-color);
     background: var(--button-border);
   }
 
@@ -201,12 +223,26 @@ const t = getTranslation(langCookie);
       this.dropdown = this.querySelector('#suggest-dropdown');
       this.form = this.querySelector('#search-form');
       this.container = this.querySelector('.search-container');
+      const clearBtn = this.querySelector('#search-clear') as HTMLElement | null;
 
       if (!this.input || !this.dropdown || !this.form || !this.container) return;
+
+      // Clear button
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          this.input!.value = '';
+          clearBtn.style.display = 'none';
+          this.input!.focus();
+          this.hideDropdown();
+        });
+      }
 
       this.input.addEventListener('input', () => {
         clearTimeout(this.debounceTimer);
         const q = this.input!.value.trim();
+        if (clearBtn) {
+          clearBtn.style.display = q.length > 0 ? '' : 'none';
+        }
         if (q.length < 1) {
           this.hideDropdown();
           return;

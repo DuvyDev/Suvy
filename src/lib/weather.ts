@@ -17,7 +17,7 @@ export interface WeatherData {
   };
 }
 
-const WEATHER_REGEX = /^(?:clima|tiempo|weather|pronostico|pronóstico)(?:\s+(?:en|de|para|in|for))?\s+(.+)$/i;
+export const WEATHER_REGEX = /^(?:clima|tiempo|weather|pronostico|pronóstico)(?:\s+(?:en|de|para|in|for))?\s+(.+)$/i;
 
 export async function getWeather(query: string, lang: string = 'en'): Promise<WeatherData | null> {
   const match = query.trim().match(WEATHER_REGEX);

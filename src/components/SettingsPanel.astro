@@ -1,0 +1,312 @@
+---
+import ThemeToggle from './ThemeToggle.astro';
+import LanguageToggle from './LanguageToggle.astro';
+import { getTranslation } from '../i18n/translations';
+
+const langCookie = Astro.cookies.get('lang')?.value;
+const lang = (langCookie === 'es' ? 'es' : 'en');
+const t = getTranslation(lang);
+
+const aiPref = Astro.cookies.get('aiPref')?.value || 'auto';
+const toolsCookie = Astro.cookies.get('tools')?.value || 'all';
+const toolKeys = ['calculator', 'calendar', 'converter', 'currency', 'weather', 'useragent'];
+const enabledTools = toolsCookie === 'none' ? [] : toolsCookie === 'all' ? toolKeys : toolsCookie.split(',');
+const toolsEnabled = Object.fromEntries(toolKeys.map(k => [k, enabledTools.includes(k)]));
+---
+
+<!-- Backdrop -->
+<div id="settings-backdrop" class="fixed inset-0 z-[60] hidden bg-black/10 backdrop-blur-sm transition-opacity duration-300 opacity-0"></div>
+
+<!-- Settings Panel -->
+<div id="settings-panel" class="fixed right-4 top-4 sm:top-20 w-[360px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-6rem)] overflow-y-auto bg-[var(--card-bg)] rounded-[1.5rem] shadow-2xl border border-[var(--search-border)] backdrop-blur-2xl z-[70] hidden flex-col transition-all duration-300 transform translate-y-4 sm:translate-y-0 sm:translate-x-8 opacity-0">
+  
+  <div class="sticky top-0 bg-[var(--card-bg)]/90 backdrop-blur-md px-6 py-4 border-b border-[var(--button-border)] flex justify-between items-center z-10">
+    <h2 class="text-lg font-bold text-[var(--text-color)]">{t.settingsTitle || 'Configuración'}</h2>
+    <button id="close-settings" class="text-[var(--text-muted)] hover:text-[var(--text-color)] transition-colors p-1 rounded-full hover:bg-[var(--button-bg)]" aria-label="Cerrar">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    </button>
+  </div>
+
+  <div class="p-6 space-y-6" id="settings-form">
+
+    <!-- Appearance -->
+    <section class="space-y-2">
+      <h3 class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider px-1">{t.settingsAppearance || 'Apariencia'}</h3>
+      <div class="settings-card">
+        <span class="settings-label">{t.settingsDarkMode || 'Modo Oscuro'}</span>
+        <div class="hover:text-[var(--link-color)] transition-colors"><ThemeToggle /></div>
+      </div>
+    </section>
+
+    <!-- Language -->
+    <section class="space-y-2">
+      <h3 class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider px-1">{t.settingsLanguage || 'Idioma'}</h3>
+      <div class="settings-card">
+        <span class="settings-label">{lang === 'es' ? 'Español / English' : 'English / Español'}</span>
+        <LanguageToggle />
+      </div>
+    </section>
+
+    <!-- AI Summary -->
+    <section class="space-y-2">
+      <h3 class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider px-1">{t.settingsAiSummary || 'IA'}</h3>
+      <div class="bg-[var(--button-bg)] border border-[var(--search-border)] rounded-2xl flex flex-col overflow-hidden">
+        <label class="settings-radio border-b border-[var(--search-border)]">
+          <input type="radio" name="aiPref" value="auto" checked={aiPref === 'auto'} />
+          <div class="flex flex-col ml-3">
+            <span class="settings-radio-label">{t.settingsAiSummaryAuto || 'Automático'}</span>
+            <span class="settings-radio-desc">{lang === 'es' ? 'Se detecta si es necesario' : 'Automatically detects'}</span>
+          </div>
+        </label>
+        <label class="settings-radio border-b border-[var(--search-border)]">
+          <input type="radio" name="aiPref" value="always" checked={aiPref === 'always'} />
+          <div class="flex flex-col ml-3">
+            <span class="settings-radio-label">{t.settingsAiSummaryAlways || 'Siempre visible'}</span>
+            <span class="settings-radio-desc">{lang === 'es' ? 'Para todas las búsquedas' : 'Shown for all searches'}</span>
+          </div>
+        </label>
+        <label class="settings-radio">
+          <input type="radio" name="aiPref" value="never" checked={aiPref === 'never'} />
+          <div class="flex flex-col ml-3">
+            <span class="settings-radio-label">{t.settingsAiSummaryNever || 'Nunca visible'}</span>
+            <span class="settings-radio-desc">{lang === 'es' ? 'Nunca mostrar resumen' : 'Summary is never shown'}</span>
+          </div>
+        </label>
+      </div>
+    </section>
+
+    <!-- Tools -->
+    <section class="space-y-2">
+      <h3 class="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider px-1">{t.settingsToolsSection || 'Herramientas'}</h3>
+      <div class="bg-[var(--button-bg)] border border-[var(--search-border)] rounded-2xl flex flex-col overflow-hidden py-1">
+        <label class="settings-toggle">
+          <span class="settings-toggle-label">{t.settingsCalculator || 'Calculadora'}</span>
+          <div class="toggle-switch">
+            <input type="checkbox" name="tool" value="calculator" checked={toolsEnabled.calculator} />
+            <div class="toggle-slider"></div>
+          </div>
+        </label>
+        <label class="settings-toggle">
+          <span class="settings-toggle-label">{t.settingsCalendar || 'Calendario'}</span>
+          <div class="toggle-switch">
+            <input type="checkbox" name="tool" value="calendar" checked={toolsEnabled.calendar} />
+            <div class="toggle-slider"></div>
+          </div>
+        </label>
+        <label class="settings-toggle">
+          <span class="settings-toggle-label">{t.settingsConverter || 'Conversor'}</span>
+          <div class="toggle-switch">
+            <input type="checkbox" name="tool" value="converter" checked={toolsEnabled.converter} />
+            <div class="toggle-slider"></div>
+          </div>
+        </label>
+        <label class="settings-toggle">
+          <span class="settings-toggle-label">{t.settingsCurrency || 'Divisas'}</span>
+          <div class="toggle-switch">
+            <input type="checkbox" name="tool" value="currency" checked={toolsEnabled.currency} />
+            <div class="toggle-slider"></div>
+          </div>
+        </label>
+        <label class="settings-toggle">
+          <span class="settings-toggle-label">{t.settingsWeather || 'Clima'}</span>
+          <div class="toggle-switch">
+            <input type="checkbox" name="tool" value="weather" checked={toolsEnabled.weather} />
+            <div class="toggle-slider"></div>
+          </div>
+        </label>
+        <label class="settings-toggle">
+          <span class="settings-toggle-label">{t.settingsUserAgent || 'User Agent'}</span>
+          <div class="toggle-switch">
+            <input type="checkbox" name="tool" value="useragent" checked={toolsEnabled.useragent} />
+            <div class="toggle-slider"></div>
+          </div>
+        </label>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const backdrop = document.getElementById('settings-backdrop');
+    const panel = document.getElementById('settings-panel');
+    const triggers = document.querySelectorAll('[data-settings-trigger]');
+    const closeBtn = document.getElementById('close-settings');
+
+    if (!backdrop || !panel) return;
+
+    function openSettings() {
+      backdrop.classList.remove('hidden');
+      panel.classList.remove('hidden');
+      // small delay to allow display:block to apply before animating opacity/transform
+      requestAnimationFrame(() => {
+        backdrop.classList.remove('opacity-0');
+        panel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:translate-x-8');
+      });
+    }
+
+    function closeSettings() {
+      backdrop.classList.add('opacity-0');
+      panel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:translate-x-8');
+      setTimeout(() => {
+        backdrop.classList.add('hidden');
+        panel.classList.add('hidden');
+      }, 300);
+    }
+
+    triggers.forEach(trigger => {
+      trigger.addEventListener('click', (e) => {
+        e.preventDefault();
+        openSettings();
+      });
+    });
+
+    closeBtn?.addEventListener('click', closeSettings);
+    backdrop.addEventListener('click', closeSettings);
+
+    // AI Summary preference
+    document.querySelectorAll<HTMLInputElement>('input[name="aiPref"]').forEach(input => {
+      input.addEventListener('change', () => {
+        document.cookie = `aiPref=${input.value}; path=/; max-age=31536000`;
+        window.location.reload();
+      });
+    });
+
+    // Tools toggles
+    document.querySelectorAll<HTMLInputElement>('input[name="tool"]').forEach(input => {
+      input.addEventListener('change', () => {
+        const checked = Array.from(document.querySelectorAll<HTMLInputElement>('input[name="tool"]:checked')).map(el => el.value);
+        const allTools = ['calculator', 'calendar', 'converter', 'currency', 'weather', 'useragent'];
+        if (checked.length === allTools.length) {
+          document.cookie = 'tools=all; path=/; max-age=31536000';
+        } else if (checked.length === 0) {
+          document.cookie = 'tools=none; path=/; max-age=31536000';
+        } else {
+          document.cookie = `tools=${checked.join(',')}; path=/; max-age=31536000`;
+        }
+        window.location.reload();
+      });
+    });
+  });
+</script>
+
+<style>
+  .settings-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--button-bg);
+    border: 1px solid var(--search-border);
+    border-radius: 1rem;
+    padding: 0.85rem 1.25rem;
+  }
+  .settings-label {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    font-weight: 500;
+  }
+
+  /* Radio group */
+  .settings-radio {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.85rem 1.25rem;
+    transition: background 0.2s;
+    margin: 0;
+  }
+  .settings-radio:hover {
+    background: var(--search-border);
+  }
+  .settings-radio input[type="radio"] {
+    accent-color: var(--link-color);
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    margin: 0;
+  }
+  .settings-radio-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 1.2;
+  }
+  .settings-radio-desc {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+  }
+
+  /* Toggle switches */
+  .settings-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 0.75rem 1.25rem;
+    transition: background 0.2s;
+  }
+  .settings-toggle:hover {
+    background: var(--search-border);
+  }
+  .settings-toggle-label {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    font-weight: 500;
+  }
+  
+  /* Modern CSS Toggle Switch */
+  .toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+  }
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--search-border);
+    transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    border-radius: 24px;
+  }
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--text-muted);
+    transition: .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    border-radius: 50%;
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: var(--link-color);
+  }
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+    background-color: #fff;
+  }
+  
+  /* Make scrollbar look nice inside panel */
+  #settings-panel::-webkit-scrollbar {
+    width: 6px;
+  }
+  #settings-panel::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  #settings-panel::-webkit-scrollbar-thumb {
+    background-color: var(--button-border);
+    border-radius: 10px;
+  }
+</style>

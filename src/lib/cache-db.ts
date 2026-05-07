@@ -106,6 +106,56 @@ export function getSuggestions(prefix: string, limit: number = 8): string[] {
   return rows.map(r => r.term);
 }
 
+export function getRelatedSearches(query: string, limit: number = 8): string[] {
+  const database = getDb();
+  const cleanQuery = query.trim().toLowerCase();
+  if (cleanQuery.length < 2) return [];
+
+  const words = cleanQuery.split(/\s+/).filter(w => w.length > 2);
+  const safeQuery = cleanQuery.replace(/[%_]/g, '\\$&');
+  
+  // Logic: 
+  // 1. Term contains the full query (e.g. "overframe" -> "overframe builds")
+  // 2. Query contains the term (e.g. "overframe reddit" -> "overframe")
+  // 3. Term contains any significant word from the query
+  
+  let sql = `
+    SELECT term 
+    FROM search_suggestions 
+    WHERE (
+      term LIKE ? ESCAPE '\\' 
+      OR ? LIKE '%' || term || '%'
+  `;
+  const params: any[] = [`%${safeQuery}%`, cleanQuery];
+
+  if (words.length > 0) {
+    const wordPlaceholders = words.map(() => "term LIKE ? ESCAPE '\\'").join(' OR ');
+    sql += ` OR ${wordPlaceholders}`;
+    words.forEach(w => params.push(`%${w.replace(/[%_]/g, '\\$&')}%`));
+  }
+
+  sql += `
+    ) 
+    AND term != ? 
+    AND LENGTH(term) > 2
+    ORDER BY 
+      (CASE WHEN term LIKE ? ESCAPE '\\' THEN 10 ELSE 0 END) +
+      (CASE WHEN ? LIKE '%' || term || '%' THEN 5 ELSE 0 END) +
+      score DESC 
+    LIMIT ?
+  `;
+  params.push(cleanQuery, `%${safeQuery}%`, cleanQuery, limit);
+
+  try {
+    const rows = database.prepare(sql).all(...params) as { term: string }[];
+    // Use a Set to ensure unique terms (just in case)
+    return [...new Set(rows.map(r => r.term))];
+  } catch (e) {
+    console.error('Related searches SQL error:', e);
+    return [];
+  }
+}
+
 export function addSuggestions(terms: string[], weight: number = 1): void {
   if (!terms || terms.length === 0) return;
   const database = getDb();

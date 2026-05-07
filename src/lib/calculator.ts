@@ -12,7 +12,7 @@ const MATH_FUNC_REGEX = /^(sqrt|sin|cos|tan|log|ln|abs|floor|ceil|round)\s*\(?\s
 const TWO_OP_REGEX = /^(\d+(?:\.\d+)?)\s*([+\-*\/%^])\s*(\d+(?:\.\d+)?)$/;
 const MATH_CONST_REGEX = /\b(pi|e)\b/;
 
-function isMathExpression(query: string): boolean {
+export function isMathExpression(query: string): boolean {
   const trimmed = query.trim();
 
   if (MATH_FUNC_REGEX.test(trimmed)) return true;

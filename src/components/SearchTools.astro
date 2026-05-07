@@ -19,7 +19,7 @@ function truncMin(iso?: string): string {
 }
 ---
 
-<search-tools class="mb-6 relative">
+<search-tools class="relative">
   <button id="tools-toggle" class="tools-btn">
     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -68,20 +68,22 @@ function truncMin(iso?: string): string {
   .tools-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    padding: 0.45rem 0.9rem;
-    border-radius: 0.75rem;
-    font-size: 0.85rem;
+    gap: 0.3rem;
+    padding: 0.65rem 0.5rem;
+    border-radius: 0;
+    font-size: 0.875rem;
     font-weight: 500;
     color: var(--text-muted);
-    background: var(--card-bg);
-    border: 1px solid var(--button-border);
+    background: transparent;
+    border: none;
     cursor: pointer;
     transition: all 0.2s ease;
   }
   .tools-btn:hover {
-    background: var(--button-hover);
-    border-color: var(--search-border);
+    color: var(--text-color);
+  }
+  .tools-btn.open {
+    color: var(--link-color);
   }
   .tools-btn .chevron {
     transition: transform 0.2s;
@@ -94,15 +96,16 @@ function truncMin(iso?: string): string {
     display: none;
     position: absolute;
     top: calc(100% + 0.5rem);
-    left: 0;
-    z-index: 50;
-    background: var(--search-bg);
+    right: 0;
+    z-index: 100;
+    background: var(--bg-color); /* Use the main background color */
+    background-image: linear-gradient(to bottom, var(--bg-color), var(--bg-color)); /* Ensure opacity */
     border: 1px solid var(--search-border);
     border-radius: 1rem;
-    padding: 1rem;
+    padding: 1.25rem;
     min-width: 320px;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   }
   .tools-dropdown.open {
     display: block;
