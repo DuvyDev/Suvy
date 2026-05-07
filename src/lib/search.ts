@@ -5,6 +5,7 @@ import { shouldQueryDDG, markQueried } from './ddg-cache';
 import { searchAndGetFirstSummary, type WikipediaResult } from './wikipedia';
 import { isGeoQuery } from './geodetect';
 import { geocode, type NominatimResult } from './nominatim';
+import { logger } from './logger';
 
 export interface SearchResult extends CrawlerSearchResultItem {
   source: 'local' | 'duckduckgo';
@@ -138,7 +139,7 @@ export async function search(rawQuery: string, options: SearchOptions = {}): Pro
           .filter((u) => u.startsWith('http'));
         requestCrawl(urlsToIndex);
       })
-      .catch(() => { /* silently ignore DDG errors */ });
+      .catch((err) => { logger.warn('searchDuckDuckGo', 'Background DDG fallback failed', err); });
   }
 
   return {

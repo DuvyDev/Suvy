@@ -1,0 +1,188 @@
+---
+import { getTranslation } from '../i18n/translations';
+
+interface Props {
+  lang: string;
+  q: string;
+  activeAfter: string;
+  langFilter: string;
+  dateRanges: { label: string; after: string | null }[];
+  languages: { label: string; code: string | null }[];
+  buildUrl: (path: string, params?: Record<string, string | null>) => string;
+}
+
+const { lang, q, activeAfter, langFilter, dateRanges, languages, buildUrl } = Astro.props;
+const t = getTranslation(lang);
+
+function truncMin(iso?: string): string {
+  return (iso || '').slice(0, 16);
+}
+---
+
+<search-tools class="mb-6 relative">
+  <button id="tools-toggle" class="tools-btn">
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+    </svg>
+    {t.tools}
+    <svg class="w-3 h-3 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+  <div id="tools-dropdown" class="tools-dropdown">
+    <div class="tools-section">
+      <span class="tools-label">{t.dateRange}</span>
+      <div class="tools-options">
+        {dateRanges.map((r) => (
+          <a
+            href={r.after ? buildUrl('/search', { after: r.after, before: null, page: '1' }) : buildUrl('/search', { after: null, before: null, page: '1' })}
+            class:list={['tools-chip', { active: activeAfter === truncMin(r.after || '') }]}
+          >
+            {r.label}
+          </a>
+        ))}
+      </div>
+    </div>
+    <div class="tools-divider"></div>
+    <div class="tools-section">
+      <span class="tools-label">{t.language}</span>
+      <div class="tools-options">
+        {languages.map((l) => (
+          <a
+            href={l.code ? buildUrl('/search', { lang: l.code, page: '1' }) : buildUrl('/search', { lang: null, page: '1' })}
+            class:list={['tools-chip', { active: langFilter === (l.code || '') }]}
+          >
+            {l.label}
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</search-tools>
+
+<style is:global>
+  search-tools {
+    display: block;
+    position: relative;
+  }
+  .tools-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    border-radius: 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    background: var(--card-bg);
+    border: 1px solid var(--button-border);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .tools-btn:hover {
+    background: var(--button-hover);
+    border-color: var(--search-border);
+  }
+  .tools-btn .chevron {
+    transition: transform 0.2s;
+  }
+  .tools-btn.open .chevron {
+    transform: rotate(180deg);
+  }
+
+  .tools-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 0;
+    z-index: 50;
+    background: var(--search-bg);
+    border: 1px solid var(--search-border);
+    border-radius: 1rem;
+    padding: 1rem;
+    min-width: 320px;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  }
+  .tools-dropdown.open {
+    display: block;
+  }
+
+  .tools-section {
+    margin-bottom: 0.75rem;
+  }
+  .tools-section:last-child {
+    margin-bottom: 0;
+  }
+  .tools-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .tools-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .tools-chip {
+    display: inline-block;
+    padding: 0.3rem 0.7rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-color);
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    text-decoration: none;
+    transition: all 0.15s;
+    cursor: pointer;
+  }
+  .tools-chip:hover {
+    background: var(--button-hover);
+    border-color: var(--link-color);
+    color: var(--link-color);
+  }
+  .tools-chip.active {
+    background: var(--link-color);
+    color: white;
+    border-color: var(--link-color);
+  }
+  .tools-divider {
+    height: 1px;
+    background: var(--button-border);
+    margin: 0.75rem 0;
+  }
+</style>
+
+<script>
+  class SearchTools extends HTMLElement {
+    constructor() {
+      super();
+    }
+
+    connectedCallback() {
+      const toggle = this.querySelector('#tools-toggle');
+      const dropdown = this.querySelector('#tools-dropdown');
+      if (!toggle || !dropdown) return;
+
+      toggle.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle.classList.toggle('open');
+        dropdown.classList.toggle('open');
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!this.contains(e.target as Node)) {
+          toggle.classList.remove('open');
+          dropdown.classList.remove('open');
+        }
+      });
+    }
+  }
+
+  customElements.define('search-tools', SearchTools);
+</script>

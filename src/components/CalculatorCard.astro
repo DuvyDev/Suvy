@@ -14,7 +14,7 @@ const data = getCalculator(q);
 if (!data) return;
 ---
 
-<div class="calculator-card animate-fade-in-up">
+<calculator-card class="calculator-card animate-fade-in-up">
   <div class="calc-header">
     <div class="flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--link-color)]">
@@ -79,10 +79,11 @@ if (!data) return;
     <button class="calc-btn calc-btn-equals" data-action="equals">=</button>
     <button class="calc-btn calc-btn-func" data-action="op" data-op="+">+</button>
   </div>
-</div>
+</calculator-card>
 
 <style is:global>
-  .calculator-card {
+  calculator-card.calculator-card {
+    display: block;
     background: var(--card-bg);
     border: 1px solid var(--button-border);
     border-radius: 1.25rem;
@@ -92,9 +93,8 @@ if (!data) return;
     backdrop-filter: blur(12px);
     overflow: hidden;
     position: relative;
-
   }
-  .calculator-card::before {
+  calculator-card.calculator-card::before {
     content: '';
     position: absolute;
     top: 0; left: 0;
@@ -189,19 +189,18 @@ if (!data) return;
   }
 </style>
 
-<script is:inline>
-(function() {
-  var OP_MAP = { '÷': '/', '×': '*', '−': '-' };
+<script>
+  const OP_MAP: Record<string, string> = { '÷': '/', '×': '*', '−': '-' };
 
-  function safeEval(expr, useDeg) {
+  function safeEval(expr: string, useDeg: boolean) {
     try {
-      var e = expr
+      let e = expr
         .replace(/π/g, '(' + Math.PI + ')')
         .replace(/\bpi\b/gi, '(' + Math.PI + ')')
         .replace(/\be\b/g, '(' + Math.E + ')')
         .replace(/\^/g, '**');
 
-      var funcRe = /\b(sin|cos|tan|log|ln|sqrt|abs)\s*\(/g;
+      const funcRe = /\b(sin|cos|tan|log|ln|sqrt|abs)\s*\(/g;
       e = e.replace(funcRe, function(_, fn) {
         if (fn === 'sqrt') return 'Math.sqrt(';
         if (fn === 'abs') return 'Math.abs(';
@@ -213,135 +212,147 @@ if (!data) return;
         return fn + '(';
       });
 
-      var __sd = function(x) { return Math.sin(x * Math.PI / 180); };
-      var __cd = function(x) { return Math.cos(x * Math.PI / 180); };
-      var __td = function(x) { return Math.tan(x * Math.PI / 180); };
+      const __sd = (x: number) => Math.sin(x * Math.PI / 180);
+      const __cd = (x: number) => Math.cos(x * Math.PI / 180);
+      const __td = (x: number) => Math.tan(x * Math.PI / 180);
 
-      var result = new Function('"use strict"; var __sd=' + __sd.toString() + ',__cd=' + __cd.toString() + ',__td=' + __td.toString() + '; return (' + e + ')')();
+      const result = new Function('"use strict"; var __sd=' + __sd.toString() + ',__cd=' + __cd.toString() + ',__td=' + __td.toString() + '; return (' + e + ')')();
       if (typeof result !== 'number' || !isFinite(result)) return 'Error';
       if (Number.isInteger(result)) return result.toString();
       return parseFloat(result.toPrecision(12)).toString();
     } catch { return 'Error'; }
   }
 
-  function initCalcs() {
-    document.querySelectorAll('.calculator-card').forEach(function(card) {
-      if (card.dataset.calcLoaded) return;
-      card.dataset.calcLoaded = 'true';
+  class CalculatorCard extends HTMLElement {
+    private display: HTMLElement | null;
+    private exprLine: HTMLElement | null;
+    private degBtn: HTMLElement | null;
+    private current: string = '0';
+    private resetOnNext: boolean = false;
+    private useDeg: boolean = true;
+    private lastExpr: string = '';
+    private lastAns: string = '0';
 
-      var display = card.querySelector('.calc-display');
-      var exprLine = card.querySelector('.calc-expression');
-      var degBtn = card.querySelector('#calc-deg-btn');
-      if (!display) return;
+    constructor() {
+      super();
+      this.display = this.querySelector('.calc-display');
+      this.exprLine = this.querySelector('.calc-expression');
+      this.degBtn = this.querySelector('#calc-deg-btn');
+    }
 
-      var current = display.textContent?.trim() || '0';
-      if (current === 'Error' || isNaN(parseFloat(current))) current = '0';
-      var resetOnNext = false;
-      var useDeg = true;
-      var lastExpr = '';
-      var lastAns = '0';
+    connectedCallback() {
+      if (!this.display) return;
 
-      function updateDisplay() {
-        display.textContent = current || '0';
-      }
-      function showExpr(txt) {
-        if (exprLine) exprLine.textContent = txt || '';
-      }
-
-      function evaluate() {
-        lastExpr = current;
-        showExpr(lastExpr + ' =');
-        var result = safeEval(current, useDeg);
-        current = result;
-        lastAns = result;
-        resetOnNext = true;
-        updateDisplay();
+      const initial = this.display.textContent?.trim() || '0';
+      if (initial !== 'Error' && !isNaN(parseFloat(initial))) {
+        this.current = initial;
       }
 
-      function applyFunc(fn) {
-        if (fn === 'pow2') {
-          if (resetOnNext) { current = '(' + current + ')^2'; resetOnNext = false; }
-          else current = current === '0' ? '(0)^2' : '(' + current + ')^2';
-          evaluate();
-          return;
-        }
-        var fnName = fn;
-        if (resetOnNext) { current = fnName + '(' + current + ')'; resetOnNext = false; }
-        else current = current === '0' ? fnName + '(0)' : fnName + '(' + current + ')';
-        evaluate();
-      }
-
-      card.querySelectorAll('.calc-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          var action = btn.dataset.action;
-          var val = btn.textContent?.trim() || '';
-          var opVal = btn.dataset.op || val;
-          if (OP_MAP[opVal]) opVal = OP_MAP[opVal];
-
-          if (current === 'Error' && action !== 'ac') current = '0';
-
-          if (action === 'digit') {
-            if (resetOnNext) { current = val; resetOnNext = false; showExpr(''); }
-            else current = current === '0' ? val : current + val;
-          } else if (action === 'op') {
-            if (current === 'Error') return;
-            if (resetOnNext) resetOnNext = false;
-            var last = current.slice(-1);
-            if (['+', '-', '*', '/', '^'].includes(last)) {
-              current = current.slice(0, -1) + opVal;
-            } else {
-              current += opVal;
-            }
-            showExpr('');
-          } else if (action === 'paren') {
-            if (resetOnNext) { current = val; resetOnNext = false; showExpr(''); }
-            else current = current === '0' ? val : current + val;
-          } else if (action === 'func') {
-            var fn = btn.dataset.func;
-            if (fn) applyFunc(fn);
-          } else if (action === 'const') {
-            var c = btn.dataset.const;
-            if (c === 'pi') {
-              if (resetOnNext) { current = 'π'; resetOnNext = false; }
-              else current = current === '0' ? 'π' : current + 'π';
-            } else if (c === 'e') {
-              if (resetOnNext) { current = 'e'; resetOnNext = false; }
-              else current = current === '0' ? 'e' : current + 'e';
-            }
-            showExpr('');
-          } else if (action === 'percent') {
-            if (resetOnNext) resetOnNext = false;
-            current = '(' + current + ')/100';
-            evaluate();
-          } else if (action === 'negate') {
-            if (current !== '0' && current !== 'Error') {
-              if (current.startsWith('-')) current = current.slice(1);
-              else current = '-' + current;
-            }
-          } else if (action === 'deg') {
-            useDeg = !useDeg;
-            if (degBtn) {
-              degBtn.textContent = useDeg ? 'DEG' : 'RAD';
-              degBtn.classList.toggle('active-deg', useDeg);
-            }
-          } else if (action === 'ans') {
-            if (resetOnNext) { current = lastAns; resetOnNext = false; }
-            else current = current === '0' ? lastAns : current + lastAns;
-            showExpr('');
-          } else if (action === 'ac') {
-            current = '0';
-            resetOnNext = false;
-            showExpr('');
-          } else if (action === 'equals') {
-            evaluate();
-          }
-          updateDisplay();
-        });
+      this.querySelectorAll('.calc-btn').forEach(btn => {
+        btn.addEventListener('click', () => this.handleButtonClick(btn as HTMLButtonElement));
       });
-    });
+    }
+
+    handleButtonClick(btn: HTMLButtonElement) {
+      const action = btn.dataset.action;
+      const val = btn.textContent?.trim() || '';
+      let opVal = btn.dataset.op || val;
+      if (OP_MAP[opVal]) opVal = OP_MAP[opVal];
+
+      if (this.current === 'Error' && action !== 'ac') this.current = '0';
+
+      if (action === 'digit') {
+        if (this.resetOnNext) { this.current = val; this.resetOnNext = false; this.showExpr(''); }
+        else this.current = this.current === '0' ? val : this.current + val;
+      } else if (action === 'op') {
+        if (this.current === 'Error') return;
+        if (this.resetOnNext) this.resetOnNext = false;
+        const last = this.current.slice(-1);
+        if (['+', '-', '*', '/', '^'].includes(last)) {
+          this.current = this.current.slice(0, -1) + opVal;
+        } else {
+          this.current += opVal;
+        }
+        this.showExpr('');
+      } else if (action === 'paren') {
+        if (this.resetOnNext) { this.current = val; this.resetOnNext = false; this.showExpr(''); }
+        else this.current = this.current === '0' ? val : this.current + val;
+      } else if (action === 'func') {
+        const fn = btn.dataset.func;
+        if (fn) this.applyFunc(fn);
+      } else if (action === 'const') {
+        const c = btn.dataset.const;
+        if (c === 'pi') {
+          if (this.resetOnNext) { this.current = 'π'; this.resetOnNext = false; }
+          else this.current = this.current === '0' ? 'π' : this.current + 'π';
+        } else if (c === 'e') {
+          if (this.resetOnNext) { this.current = 'e'; this.resetOnNext = false; }
+          else this.current = this.current === '0' ? 'e' : this.current + 'e';
+        }
+        this.showExpr('');
+      } else if (action === 'percent') {
+        if (this.resetOnNext) this.resetOnNext = false;
+        this.current = '(' + this.current + ')/100';
+        this.evaluate();
+      } else if (action === 'negate') {
+        if (this.current !== '0' && this.current !== 'Error') {
+          if (this.current.startsWith('-')) this.current = this.current.slice(1);
+          else this.current = '-' + this.current;
+        }
+      } else if (action === 'deg') {
+        this.useDeg = !this.useDeg;
+        if (this.degBtn) {
+          this.degBtn.textContent = this.useDeg ? 'DEG' : 'RAD';
+          this.degBtn.classList.toggle('active-deg', this.useDeg);
+        }
+      } else if (action === 'ans') {
+        if (this.resetOnNext) { this.current = this.lastAns; this.resetOnNext = false; }
+        else this.current = this.current === '0' ? this.lastAns : this.current + this.lastAns;
+        this.showExpr('');
+      } else if (action === 'ac') {
+        this.current = '0';
+        this.resetOnNext = false;
+        this.showExpr('');
+      } else if (action === 'equals') {
+        this.evaluate();
+      }
+      this.updateDisplay();
+    }
+
+    updateDisplay() {
+      if (this.display) {
+        this.display.textContent = this.current || '0';
+      }
+    }
+
+    showExpr(txt: string) {
+      if (this.exprLine) {
+        this.exprLine.textContent = txt || '';
+      }
+    }
+
+    evaluate() {
+      this.lastExpr = this.current;
+      this.showExpr(this.lastExpr + ' =');
+      const result = safeEval(this.current, this.useDeg);
+      this.current = result;
+      this.lastAns = result;
+      this.resetOnNext = true;
+      this.updateDisplay();
+    }
+
+    applyFunc(fn: string) {
+      if (fn === 'pow2') {
+        if (this.resetOnNext) { this.current = '(' + this.current + ')^2'; this.resetOnNext = false; }
+        else this.current = this.current === '0' ? '(0)^2' : '(' + this.current + ')^2';
+        this.evaluate();
+        return;
+      }
+      if (this.resetOnNext) { this.current = fn + '(' + this.current + ')'; this.resetOnNext = false; }
+      else this.current = this.current === '0' ? fn + '(0)' : fn + '(' + this.current + ')';
+      this.evaluate();
+    }
   }
 
-  initCalcs();
-  document.addEventListener('astro:page-load', initCalcs);
-})();
+  customElements.define('calculator-card', CalculatorCard);
 </script>

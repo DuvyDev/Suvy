@@ -1,4 +1,5 @@
 import type { SearchResultItem } from './duckduckgo';
+import { logger } from './logger';
 
 /**
  * Base URL for the Duvycrawl API.
@@ -107,7 +108,7 @@ export async function searchCrawler(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.warn(`[duvycrawl] API returned status ${response.status}`);
+      logger.warn('duvycrawl', `API returned status ${response.status} for search`);
       return [];
     }
 
@@ -121,9 +122,9 @@ export async function searchCrawler(
     }));
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      console.warn('[duvycrawl] Search request timed out');
+      logger.warn('duvycrawl', 'Search request timed out');
     } else {
-      console.warn('[duvycrawl] Search failed:', error?.message || error);
+      logger.warn('duvycrawl', 'Search failed', error);
     }
     return [];
   }
@@ -150,8 +151,8 @@ export async function requestCrawl(urls: string[], force: boolean = false): Prom
 
     clearTimeout(timeoutId);
     console.log(`[duvycrawl] Requested crawl for ${urls.length} URL(s) (force=${force})`);
-  } catch {
-    // Silently ignore — the crawler might not be running.
+  } catch (error) {
+    logger.warn('duvycrawl', 'Failed to request crawl (crawler might not be running)', error);
   }
 }
 
@@ -200,7 +201,7 @@ export async function searchCrawlerFull(
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.warn(`[duvycrawl] API returned status ${response.status}`);
+      logger.warn('duvycrawl', `API returned status ${response.status} for searchCrawlerFull`);
       return { results: [], total: 0 };
     }
 
@@ -227,9 +228,9 @@ export async function searchCrawlerFull(
     return { results, total: data.total || 0 };
   } catch (error: any) {
     if (error?.name === 'AbortError') {
-      console.warn('[duvycrawl] Search request timed out');
+      logger.warn('duvycrawl', 'Full search request timed out');
     } else {
-      console.warn('[duvycrawl] Search failed:', error?.message || error);
+      logger.warn('duvycrawl', 'Full search failed', error);
     }
     return { results: [], total: 0 };
   }
@@ -282,7 +283,8 @@ export async function searchCrawlerImages(
     }));
 
     return { results, total: data.total || 0 };
-  } catch {
+  } catch (error) {
+    logger.warn('duvycrawl', 'Image search failed', error);
     return { results: [], total: 0 };
   }
 }

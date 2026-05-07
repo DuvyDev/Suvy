@@ -39,7 +39,7 @@ const activeCat = queryResult.category || 'length';
 const gradient = accentGradients[activeCat] || accentGradients.length;
 ---
 
-<div class="converter-card animate-fade-in-up" style={`--accent-gradient: ${gradient}`} data-cats={catsJson} data-prefill={prefillJson} data-lang={lang === 'es' ? 'es' : 'en'}>
+<converter-card class="converter-card animate-fade-in-up" style={`--accent-gradient: ${gradient}`} data-cats={catsJson} data-prefill={prefillJson} data-lang={lang === 'es' ? 'es' : 'en'}>
   <div class="conv-header">
     <div class="flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--link-color)]">
@@ -97,10 +97,11 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
   {queryResult.mode === 'result' ? (
     <div class="conv-formula">{queryResult.result!.formula}</div>
   ) : null}
-</div>
+</converter-card>
 
-<style>
-  .converter-card {
+<style is:global>
+  converter-card.converter-card {
+    display: block;
     background: var(--card-bg);
     border: 1px solid var(--button-border);
     border-radius: 1.25rem;
@@ -111,21 +112,21 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
     overflow: hidden;
     position: relative;
   }
-  .converter-card::before {
+  converter-card.converter-card::before {
     content: '';
     position: absolute;
     top: 0; left: 0;
     width: 100%; height: 4px;
     background: var(--accent-gradient, linear-gradient(90deg, #4285F4, #34A853));
   }
-  .conv-header { margin-bottom: 1rem; }
-  .conv-categories {
+  .converter-card .conv-header { margin-bottom: 1rem; }
+  .converter-card .conv-categories {
     display: flex;
     flex-wrap: wrap;
     gap: 0.35rem;
     margin-bottom: 1rem;
   }
-  .conv-cat-btn {
+  .converter-card .conv-cat-btn {
     padding: 0.3rem 0.7rem;
     border-radius: 9999px;
     font-size: 0.78rem;
@@ -137,27 +138,27 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
     transition: all 0.15s;
     white-space: nowrap;
   }
-  .conv-cat-btn:hover { background: var(--button-hover); color: var(--text-color); }
-  .conv-cat-btn.active {
+  .converter-card .conv-cat-btn:hover { background: var(--button-hover); color: var(--text-color); }
+  .converter-card .conv-cat-btn.active {
     background: var(--link-color);
     color: white;
     border-color: var(--link-color);
   }
-  .conv-body {
+  .converter-card .conv-body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
-  .conv-row {
+  .converter-card .conv-row {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
     flex: 1;
   }
-  .conv-field {
+  .converter-card .conv-field {
     position: relative;
   }
-  .conv-input, .conv-select, .conv-output {
+  .converter-card .conv-input, .converter-card .conv-select, .converter-card .conv-output {
     width: 100%;
     padding: 0.65rem 0.75rem;
     border-radius: 0.65rem;
@@ -169,15 +170,15 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
     transition: border-color 0.15s;
     box-sizing: border-box;
   }
-  .conv-input:focus, .conv-select:focus {
+  .converter-card .conv-input:focus, .converter-card .conv-select:focus {
     outline: none;
     border-color: var(--link-color);
   }
-  .conv-input {
+  .converter-card .conv-input {
     font-size: 1.25rem;
     font-weight: 700;
   }
-  .conv-select {
+  .converter-card .conv-select {
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
@@ -186,10 +187,10 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
     background-position: right 0.6rem center;
     padding-right: 2rem;
   }
-  .dark .conv-select {
+  .dark .converter-card .conv-select {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23bdc1c6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
   }
-  .conv-output {
+  .converter-card .conv-output {
     font-size: 1.25rem;
     font-weight: 700;
     color: var(--link-color);
@@ -198,8 +199,8 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
     min-height: 2.9rem;
     word-break: break-all;
   }
-  .conv-result-field { min-width: 0; }
-  .conv-swap {
+  .converter-card .conv-result-field { min-width: 0; }
+  .converter-card .conv-swap {
     flex-shrink: 0;
     width: 2.25rem;
     height: 2.25rem;
@@ -213,13 +214,13 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
     color: var(--link-color);
     transition: all 0.15s;
   }
-  .conv-swap:hover {
+  .converter-card .conv-swap:hover {
     background: var(--link-color);
     color: white;
     border-color: var(--link-color);
     transform: rotate(180deg);
   }
-  .conv-formula {
+  .converter-card .conv-formula {
     margin-top: 0.75rem;
     text-align: center;
     font-size: 0.8rem;
@@ -228,132 +229,152 @@ const gradient = accentGradients[activeCat] || accentGradients.length;
     font-family: 'SF Mono', 'Fira Code', monospace;
   }
   @media (max-width: 480px) {
-    .conv-body { flex-direction: column; }
-    .conv-swap { transform: rotate(90deg); }
-    .conv-swap:hover { transform: rotate(270deg); }
+    .converter-card .conv-body { flex-direction: column; }
+    .converter-card .conv-swap { transform: rotate(90deg); }
+    .converter-card .conv-swap:hover { transform: rotate(270deg); }
   }
 </style>
 
-<script is:inline>
-(function() {
-  function initConverters() {
-    document.querySelectorAll('.converter-card').forEach(card => {
-      if (card.dataset.convLoaded) return;
-      card.dataset.convLoaded = 'true';
+<script>
+  class ConverterCard extends HTMLElement {
+    private input: HTMLInputElement | null;
+    private fromSel: HTMLSelectElement | null;
+    private toSel: HTMLSelectElement | null;
+    private output: HTMLElement | null;
+    private swapBtn: HTMLButtonElement | null;
+    private catBtns: NodeListOf<HTMLButtonElement>;
+    private formulaEl: HTMLElement | null;
+    private lang: string;
+    private cats: any[];
+    private prefill: any;
 
-      const lang = card.dataset.lang || 'en';
-      const cats = JSON.parse(card.dataset.cats);
-      const prefill = JSON.parse(card.dataset.prefill);
+    constructor() {
+      super();
+      this.lang = this.dataset.lang || 'en';
+      this.cats = JSON.parse(this.dataset.cats || '[]');
+      this.prefill = JSON.parse(this.dataset.prefill || '{}');
 
-      const input = card.querySelector('#conv-input');
-      const fromSel = card.querySelector('#conv-from');
-      const toSel = card.querySelector('#conv-to');
-      const output = card.querySelector('#conv-output');
-      const swapBtn = card.querySelector('#conv-swap');
-      const catBtns = card.querySelectorAll('.conv-cat-btn');
-      const formulaEl = card.querySelector('.conv-formula');
+      this.input = this.querySelector('#conv-input');
+      this.fromSel = this.querySelector('#conv-from');
+      this.toSel = this.querySelector('#conv-to');
+      this.output = this.querySelector('#conv-output');
+      this.swapBtn = this.querySelector('#conv-swap');
+      this.catBtns = this.querySelectorAll('.conv-cat-btn');
+      this.formulaEl = this.querySelector('.conv-formula');
+    }
 
-      if (!input || !fromSel || !toSel || !output) return;
+    connectedCallback() {
+      if (!this.input || !this.fromSel || !this.toSel || !this.output) return;
 
-      function getCurrentCat() {
-        return cats.find(c => c.key === card.querySelector('.conv-cat-btn.active')?.dataset.cat);
-      }
-
-      function convert() {
-        const cat = getCurrentCat();
-        if (!cat) return;
-        const val = parseFloat(input.value);
-        const from = fromSel.value;
-        const to = toSel.value;
-
-        if (isNaN(val) || val < 0) { output.textContent = '—'; if (formulaEl) formulaEl.textContent = ''; return; }
-
-        let result;
-        if (cat.isTemperature) {
-          let kelvin;
-          if (from === 'C') kelvin = val + 273.15;
-          else if (from === 'F') kelvin = (val - 32) * 5 / 9 + 273.15;
-          else kelvin = val;
-          if (to === 'C') result = kelvin - 273.15;
-          else if (to === 'F') result = (kelvin - 273.15) * 9 / 5 + 32;
-          else result = kelvin;
-        } else {
-          const fromU = cat.units.find(u => u.short === from);
-          const toU = cat.units.find(u => u.short === to);
-          if (!fromU || !toU) { output.textContent = '—'; return; }
-          result = val * fromU.factor / toU.factor;
-        }
-
-        let display;
-        if (Number.isInteger(result)) display = result.toString();
-        else {
-          const abs = Math.abs(result);
-          if (abs < 0.0001 || abs >= 1e12) display = result.toExponential(4);
-          else display = parseFloat(result.toPrecision(10)).toString();
-        }
-        output.textContent = display;
-
-        if (formulaEl) {
-          const fromLabel = cat.units.find(u => u.short === from)?.label[lang] || from;
-          const toLabel = cat.units.find(u => u.short === to)?.label[lang] || to;
-          formulaEl.textContent = `${val} ${fromLabel} = ${display} ${toLabel}`;
-        }
-      }
-
-      function populateSelects(cat) {
-        const key = (lang === 'es' ? 'es' : 'en');
-        fromSel.innerHTML = '';
-        toSel.innerHTML = '';
-        cat.units.forEach(u => {
-          const opt1 = document.createElement('option');
-          opt1.value = u.short;
-          opt1.textContent = u.label[key];
-          fromSel.appendChild(opt1);
-          const opt2 = document.createElement('option');
-          opt2.value = u.short;
-          opt2.textContent = u.label[key];
-          toSel.appendChild(opt2);
-        });
-        fromSel.value = cat.units[0].short;
-        toSel.value = cat.units.length > 1 ? cat.units[1].short : cat.units[0].short;
-        convert();
-      }
-
-      catBtns.forEach(btn => {
+      this.catBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-          catBtns.forEach(b => b.classList.remove('active'));
+          this.catBtns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const catKey = btn.dataset.cat;
-          const cat = cats.find(c => c.key === catKey);
-          if (cat) populateSelects(cat);
+          const cat = this.cats.find(c => c.key === catKey);
+          if (cat) this.populateSelects(cat);
         });
       });
 
-      input.addEventListener('input', convert);
-      fromSel.addEventListener('change', convert);
-      toSel.addEventListener('change', convert);
+      this.input.addEventListener('input', () => this.convert());
+      this.fromSel.addEventListener('change', () => this.convert());
+      this.toSel.addEventListener('change', () => this.convert());
 
-      swapBtn.addEventListener('click', () => {
-        const tmp = fromSel.value;
-        fromSel.value = toSel.value;
-        toSel.value = tmp;
-        convert();
-      });
+      if (this.swapBtn) {
+        this.swapBtn.addEventListener('click', () => {
+          const tmp = this.fromSel!.value;
+          this.fromSel!.value = this.toSel!.value;
+          this.toSel!.value = tmp;
+          this.convert();
+        });
+      }
 
-      if (prefill.category && prefill.fromUnit && prefill.toUnit) {
-        const activeBtn = card.querySelector(`.conv-cat-btn[data-cat="${prefill.category}"]`);
+      if (this.prefill.category && this.prefill.fromUnit && this.prefill.toUnit) {
+        const activeBtn = this.querySelector(`.conv-cat-btn[data-cat="${this.prefill.category}"]`) as HTMLButtonElement;
         if (activeBtn) activeBtn.click();
         setTimeout(() => {
-          if (fromSel.querySelector(`option[value="${prefill.fromUnit}"]`)) fromSel.value = prefill.fromUnit;
-          if (toSel.querySelector(`option[value="${prefill.toUnit}"]`)) toSel.value = prefill.toUnit;
-          if (prefill.inputValue != null) input.value = prefill.inputValue;
-          convert();
+          if (this.fromSel!.querySelector(`option[value="${this.prefill.fromUnit}"]`)) this.fromSel!.value = this.prefill.fromUnit;
+          if (this.toSel!.querySelector(`option[value="${this.prefill.toUnit}"]`)) this.toSel!.value = this.prefill.toUnit;
+          if (this.prefill.inputValue != null) this.input!.value = this.prefill.inputValue;
+          this.convert();
         }, 10);
       }
-    });
+    }
+
+    getCurrentCat() {
+      const activeBtn = this.querySelector('.conv-cat-btn.active') as HTMLElement;
+      return this.cats.find(c => c.key === activeBtn?.dataset.cat);
+    }
+
+    convert() {
+      const cat = this.getCurrentCat();
+      if (!cat) return;
+      const val = parseFloat(this.input!.value);
+      const from = this.fromSel!.value;
+      const to = this.toSel!.value;
+
+      if (isNaN(val) || val < 0) { 
+        this.output!.textContent = '—'; 
+        if (this.formulaEl) this.formulaEl.textContent = ''; 
+        return; 
+      }
+
+      let result: number;
+      if (cat.isTemperature) {
+        let kelvin: number;
+        if (from === 'C') kelvin = val + 273.15;
+        else if (from === 'F') kelvin = (val - 32) * 5 / 9 + 273.15;
+        else kelvin = val;
+        if (to === 'C') result = kelvin - 273.15;
+        else if (to === 'F') result = (kelvin - 273.15) * 9 / 5 + 32;
+        else result = kelvin;
+      } else {
+        const fromU = cat.units.find((u: any) => u.short === from);
+        const toU = cat.units.find((u: any) => u.short === to);
+        if (!fromU || !toU) { this.output!.textContent = '—'; return; }
+        result = val * fromU.factor / toU.factor;
+      }
+
+      let display: string;
+      if (Number.isInteger(result)) display = result.toString();
+      else {
+        const abs = Math.abs(result);
+        if (abs < 0.0001 || abs >= 1e12) display = result.toExponential(4);
+        else display = parseFloat(result.toPrecision(10)).toString();
+      }
+      this.output!.textContent = display;
+
+      if (this.formulaEl) {
+        const fromLabel = cat.units.find((u: any) => u.short === from)?.label[this.lang] || from;
+        const toLabel = cat.units.find((u: any) => u.short === to)?.label[this.lang] || to;
+        this.formulaEl.textContent = `${val} ${fromLabel} = ${display} ${toLabel}`;
+      }
+    }
+
+    populateSelects(cat: any) {
+      const key = (this.lang === 'es' ? 'es' : 'en');
+      if (!this.fromSel || !this.toSel) return;
+      
+      this.fromSel.innerHTML = '';
+      this.toSel.innerHTML = '';
+      
+      cat.units.forEach((u: any) => {
+        const opt1 = document.createElement('option');
+        opt1.value = u.short;
+        opt1.textContent = u.label[key];
+        this.fromSel!.appendChild(opt1);
+        
+        const opt2 = document.createElement('option');
+        opt2.value = u.short;
+        opt2.textContent = u.label[key];
+        this.toSel!.appendChild(opt2);
+      });
+      
+      this.fromSel.value = cat.units[0].short;
+      this.toSel.value = cat.units.length > 1 ? cat.units[1].short : cat.units[0].short;
+      this.convert();
+    }
   }
 
-  initConverters();
-  document.addEventListener('astro:page-load', initConverters);
-})();
+  customElements.define('converter-card', ConverterCard);
 </script>

@@ -22,7 +22,7 @@ const fromCur = currencies.find(c => c.code === fromCode) || currencies[0];
 const toCur = currencies.find(c => c.code === toCode) || currencies[1];
 ---
 
-<div class="currency-card animate-fade-in-up" data-lang={lang === 'es' ? 'es' : 'en'} data-from={fromCode} data-to={toCode} data-amount={amount} data-currencies={JSON.stringify(currencies)}>
+<currency-card class="currency-card animate-fade-in-up" data-lang={lang === 'es' ? 'es' : 'en'} data-from={fromCode} data-to={toCode} data-amount={amount} data-currencies={JSON.stringify(currencies)}>
   <div class="curr-header">
     <div class="flex items-center gap-2">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[var(--link-color)]">
@@ -69,10 +69,11 @@ const toCur = currencies.find(c => c.code === toCode) || currencies[1];
     <span id="curr-rate"></span>
     <span id="curr-source">{t.currency_source}</span>
   </div>
-</div>
+</currency-card>
 
 <style is:global>
-  .currency-card {
+  currency-card.currency-card {
+    display: block;
     background: var(--card-bg);
     border: 1px solid var(--button-border);
     border-radius: 1.25rem;
@@ -83,7 +84,7 @@ const toCur = currencies.find(c => c.code === toCode) || currencies[1];
     overflow: hidden;
     position: relative;
   }
-  .currency-card::before {
+  currency-card.currency-card::before {
     content: '';
     position: absolute;
     top: 0; left: 0;
@@ -180,127 +181,141 @@ const toCur = currencies.find(c => c.code === toCode) || currencies[1];
   }
 </style>
 
-<script is:inline>
-(function() {
-  var TTL = 6 * 60 * 60 * 1000;
+<script>
+  const TTL = 6 * 60 * 60 * 1000;
+  const memCache: Record<string, any> = {};
 
-  function loadCache(base) {
+  function loadCache(base: string) {
     try {
-      var raw = localStorage.getItem('curr_' + base);
+      const raw = localStorage.getItem('curr_' + base);
       if (!raw) return null;
-      var entry = JSON.parse(raw);
+      const entry = JSON.parse(raw);
       if (Date.now() - entry.ts > TTL) return null;
       return entry.data;
     } catch { return null; }
   }
 
-  function saveCache(base, data) {
+  function saveCache(base: string, data: any) {
     try {
-      localStorage.setItem('curr_' + base, JSON.stringify({ ts: Date.now(), data: data }));
+      localStorage.setItem('curr_' + base, JSON.stringify({ ts: Date.now(), data }));
     } catch {}
   }
 
-  var memCache = {};
-
-  function formatNum(val) {
+  function formatNum(val: number) {
     if (Math.abs(val) >= 1) {
       return new Intl.NumberFormat(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
     }
     return parseFloat(val.toPrecision(10)).toString();
   }
 
-  function niceRate(n) {
+  function niceRate(n: number) {
     if (Number.isInteger(n)) return n.toString();
     return parseFloat(n.toPrecision(10)).toString();
   }
 
-  function initCurrencies() {
-    document.querySelectorAll('.currency-card').forEach(function(card) {
-      if (card.dataset.currLoaded) return;
-      card.dataset.currLoaded = 'true';
+  class CurrencyCard extends HTMLElement {
+    private input: HTMLInputElement | null;
+    private fromSel: HTMLSelectElement | null;
+    private toSel: HTMLSelectElement | null;
+    private output: HTMLElement | null;
+    private swapBtn: HTMLButtonElement | null;
+    private rateEl: HTMLElement | null;
+    private currencies: any[];
+    private currentRate: number | null = null;
 
-      var currencies = JSON.parse(card.dataset.currencies);
-      var input = card.querySelector('#curr-input');
-      var fromSel = card.querySelector('#curr-from');
-      var toSel = card.querySelector('#curr-to');
-      var output = card.querySelector('#curr-output');
-      var swapBtn = card.querySelector('#curr-swap');
-      var rateEl = card.querySelector('#curr-rate');
+    constructor() {
+      super();
+      this.currencies = JSON.parse(this.dataset.currencies || '[]');
+      this.input = this.querySelector('#curr-input');
+      this.fromSel = this.querySelector('#curr-from');
+      this.toSel = this.querySelector('#curr-to');
+      this.output = this.querySelector('#curr-output');
+      this.swapBtn = this.querySelector('#curr-swap');
+      this.rateEl = this.querySelector('#curr-rate');
+    }
 
-      if (!input || !fromSel || !toSel || !output) return;
+    connectedCallback() {
+      if (!this.input || !this.fromSel || !this.toSel || !this.output || !this.swapBtn) return;
 
-      var currentRate = null;
+      this.input.addEventListener('input', () => this.updateOutput());
+      this.fromSel.addEventListener('change', () => this.onCurrencyChange());
+      this.toSel.addEventListener('change', () => this.onCurrencyChange());
 
-      function updateOutput() {
-        var val = parseFloat(input.value);
-        if (isNaN(val) || val < 0) { output.textContent = '—'; if (rateEl) rateEl.textContent = ''; return; }
-        if (!currentRate) { output.textContent = '…'; return; }
-        var result = val * currentRate;
-        output.textContent = formatNum(result);
-        if (rateEl) {
-          rateEl.textContent = '1 ' + fromSel.value + ' = ' + niceRate(currentRate) + ' ' + toSel.value;
-        }
-      }
-
-      async function fetchRate(from, to) {
-        var base = from.toLowerCase();
-        var target = to.toLowerCase();
-
-        var cached = memCache[base] || loadCache(base);
-        if (cached) {
-          memCache[base] = cached;
-          if (cached[target] != null) {
-            currentRate = cached[target];
-            updateOutput();
-            return;
-          }
-        }
-
-        try {
-          var res = await fetch('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/' + base + '.json');
-          var data = await res.json();
-          var rates = data[base];
-          if (rates && rates[target] != null) {
-            currentRate = rates[target];
-            memCache[base] = rates;
-            saveCache(base, rates);
-            updateOutput();
-          } else {
-            output.textContent = 'Error';
-            if (rateEl) rateEl.textContent = '';
-          }
-        } catch {
-          output.textContent = 'Error';
-          if (rateEl) rateEl.textContent = '';
-        }
-      }
-
-      function onCurrencyChange() {
-        var from = fromSel.value;
-        var to = toSel.value;
-        if (from === to) {
-          var other = currencies.find(function(c) { return c.code !== from; });
-          if (other) { to = other.code; toSel.value = to; }
-        }
-        fetchRate(from, to);
-      }
-
-      input.addEventListener('input', updateOutput);
-      fromSel.addEventListener('change', onCurrencyChange);
-      toSel.addEventListener('change', onCurrencyChange);
-
-      swapBtn.addEventListener('click', function() {
-        var tmp = fromSel.value;
-        fromSel.value = toSel.value;
-        toSel.value = tmp;
-        onCurrencyChange();
+      this.swapBtn.addEventListener('click', () => {
+        const tmp = this.fromSel!.value;
+        this.fromSel!.value = this.toSel!.value;
+        this.toSel!.value = tmp;
+        this.onCurrencyChange();
       });
 
-      onCurrencyChange();
-    });
+      this.onCurrencyChange();
+    }
+
+    updateOutput() {
+      const val = parseFloat(this.input!.value);
+      if (isNaN(val) || val < 0) { 
+        this.output!.textContent = '—'; 
+        if (this.rateEl) this.rateEl.textContent = ''; 
+        return; 
+      }
+      if (this.currentRate === null) { 
+        this.output!.textContent = '…'; 
+        return; 
+      }
+      
+      const result = val * this.currentRate;
+      this.output!.textContent = formatNum(result);
+      if (this.rateEl) {
+        this.rateEl.textContent = `1 ${this.fromSel!.value} = ${niceRate(this.currentRate)} ${this.toSel!.value}`;
+      }
+    }
+
+    async fetchRate(from: string, to: string) {
+      const base = from.toLowerCase();
+      const target = to.toLowerCase();
+
+      const cached = memCache[base] || loadCache(base);
+      if (cached) {
+        memCache[base] = cached;
+        if (cached[target] != null) {
+          this.currentRate = cached[target];
+          this.updateOutput();
+          return;
+        }
+      }
+
+      try {
+        const res = await fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/${base}.json`);
+        const data = await res.json();
+        const rates = data[base];
+        if (rates && rates[target] != null) {
+          this.currentRate = rates[target];
+          memCache[base] = rates;
+          saveCache(base, rates);
+          this.updateOutput();
+        } else {
+          this.output!.textContent = 'Error';
+          if (this.rateEl) this.rateEl.textContent = '';
+        }
+      } catch {
+        this.output!.textContent = 'Error';
+        if (this.rateEl) this.rateEl.textContent = '';
+      }
+    }
+
+    onCurrencyChange() {
+      let from = this.fromSel!.value;
+      let to = this.toSel!.value;
+      if (from === to) {
+        const other = this.currencies.find(c => c.code !== from);
+        if (other) { 
+          to = other.code; 
+          this.toSel!.value = to; 
+        }
+      }
+      this.fetchRate(from, to);
+    }
   }
 
-  initCurrencies();
-  document.addEventListener('astro:page-load', initCurrencies);
-})();
+  customElements.define('currency-card', CurrencyCard);
 </script>

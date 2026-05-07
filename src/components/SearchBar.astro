@@ -15,35 +15,41 @@ const langCookie = Astro.cookies.get('lang')?.value;
 const t = getTranslation(langCookie);
 ---
 
-<form action={action} method="get" class="w-full max-w-[650px] mx-auto group" id="search-form">
-  <div class:list={['search-container', { compact }]}>
-    <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="search-icon">
-      <path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
-    </svg>
-    <input 
-      type="text" 
-      name="q" 
-      id="search-input"
-      value={value}
-      placeholder={t.searchPlaceholder}
-      class="search-input"
-      autocomplete="off"
-      autofocus={autoFocus}
-    />
-    <button type="submit" aria-label="Search" class="search-btn">
-      <svg class="w-6 h-6 text-[var(--link-color)]" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-         <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+<search-bar data-action={action} data-compact={compact ? 'true' : 'false'} data-autofocus={autoFocus ? 'true' : 'false'}>
+  <form action={action} method="get" class="w-full max-w-[650px] mx-auto group" id="search-form">
+    <div class:list={['search-container', { compact }]}>
+      <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="search-icon">
+        <path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
       </svg>
-    </button>
+      <input 
+        type="text" 
+        name="q" 
+        id="search-input"
+        value={value}
+        placeholder={t.searchPlaceholder}
+        class="search-input"
+        autocomplete="off"
+        autofocus={autoFocus}
+      />
+      <button type="submit" aria-label="Search" class="search-btn">
+        <svg class="w-6 h-6 text-[var(--link-color)]" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+           <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+        </svg>
+      </button>
 
-    <!-- Autocomplete dropdown -->
-    <div id="suggest-dropdown" class="suggest-dropdown" style="display: none;">
-      <!-- Items injected by JS -->
+      <!-- Autocomplete dropdown -->
+      <div id="suggest-dropdown" class="suggest-dropdown" style="display: none;">
+        <!-- Items injected by JS -->
+      </div>
     </div>
-  </div>
-</form>
+  </form>
+</search-bar>
 
 <style>
+  search-bar {
+    display: block;
+    width: 100%;
+  }
   .search-container {
     position: relative;
     display: flex;
@@ -175,135 +181,139 @@ const t = getTranslation(langCookie);
   }
 </style>
 
-<script is:inline>
-function initSearchBar() {
-  const input = document.getElementById('search-input');
-  const dropdown = document.getElementById('suggest-dropdown');
-  const form = document.getElementById('search-form');
-  if (!input || !dropdown || !form) return;
+<script>
+  class SearchBar extends HTMLElement {
+    private input: HTMLInputElement | null = null;
+    private dropdown: HTMLElement | null = null;
+    private form: HTMLFormElement | null = null;
+    private container: HTMLElement | null = null;
+    private debounceTimer: any = null;
+    private activeIndex: number = -1;
+    private suggestions: string[] = [];
+    private currentQuery: string = '';
 
-  // Prevent multiple bindings if Astro runs this multiple times on the same element
-  if (input.dataset.suggestLoaded) return;
-  input.dataset.suggestLoaded = 'true';
-
-  let debounceTimer = null;
-  let activeIndex = -1;
-  let suggestions = [];
-  let currentQuery = '';
-
-  function highlightMatch(text, query) {
-    if (!query) return text;
-    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return text.replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>');
-  }
-
-  function renderDropdown() {
-    if (suggestions.length === 0) {
-      dropdown.style.display = 'none';
-      input.closest('.search-container').classList.remove('has-suggestions');
-      return;
+    constructor() {
+      super();
     }
 
-    dropdown.innerHTML = suggestions.map(function(s, i) {
-      return '<div class="suggest-item' + (i === activeIndex ? ' active' : '') + '" data-index="' + i + '">' +
-        '<svg class="suggest-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>' +
-        '<span class="suggest-text">' + highlightMatch(s, currentQuery) + '</span>' +
-        '</div>';
-    }).join('');
+    connectedCallback() {
+      this.input = this.querySelector('#search-input');
+      this.dropdown = this.querySelector('#suggest-dropdown');
+      this.form = this.querySelector('#search-form');
+      this.container = this.querySelector('.search-container');
 
-    dropdown.style.display = 'block';
-    input.closest('.search-container').classList.add('has-suggestions');
+      if (!this.input || !this.dropdown || !this.form || !this.container) return;
 
-    // Click handler for each item
-    dropdown.querySelectorAll('.suggest-item').forEach(function(item) {
-      item.addEventListener('mousedown', function(e) {
-        e.preventDefault();
-        var idx = parseInt(item.getAttribute('data-index'));
-        input.value = suggestions[idx];
-        hideDropdown();
-        form.submit();
+      this.input.addEventListener('input', () => {
+        clearTimeout(this.debounceTimer);
+        const q = this.input!.value.trim();
+        if (q.length < 1) {
+          this.hideDropdown();
+          return;
+        }
+        this.debounceTimer = setTimeout(() => {
+          this.fetchSuggestions(q);
+        }, 250);
       });
-    });
-  }
 
-  function hideDropdown() {
-    dropdown.style.display = 'none';
-    input.closest('.search-container').classList.remove('has-suggestions');
-    suggestions = [];
-    activeIndex = -1;
-  }
+      this.input.addEventListener('keydown', (e) => {
+        if (this.suggestions.length === 0) return;
 
-  async function fetchSuggestions(query) {
-    if (query.length < 1) {
-      hideDropdown();
-      return;
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          this.activeIndex = (this.activeIndex + 1) % this.suggestions.length;
+          this.renderDropdown();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          this.activeIndex = this.activeIndex <= 0 ? this.suggestions.length - 1 : this.activeIndex - 1;
+          this.renderDropdown();
+        } else if (e.key === 'Enter' && this.activeIndex >= 0) {
+          e.preventDefault();
+          this.input!.value = this.suggestions[this.activeIndex];
+          this.hideDropdown();
+          this.form!.submit();
+        } else if (e.key === 'Escape') {
+          this.hideDropdown();
+        }
+      });
+
+      this.input.addEventListener('blur', () => {
+        setTimeout(() => this.hideDropdown(), 200);
+      });
+
+      this.input.addEventListener('focus', () => {
+        if (this.input!.value.trim().length >= 1 && this.suggestions.length > 0) {
+          this.renderDropdown();
+        }
+      });
     }
 
-    try {
-      var res = await fetch('/api/suggest?q=' + encodeURIComponent(query));
-      if (!res.ok) return;
-      var data = await res.json();
-      // OpenSearch format: [query, [titles], [descriptions], [urls]]
-      if (Array.isArray(data) && data.length >= 2) {
-        currentQuery = query;
-        suggestions = data[1] || [];
-        activeIndex = -1;
-        renderDropdown();
+    private highlightMatch(text: string, query: string) {
+      if (!query) return text;
+      const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return text.replace(new RegExp('(' + escaped + ')', 'gi'), '<mark>$1</mark>');
+    }
+
+    private renderDropdown() {
+      if (!this.dropdown || !this.container) return;
+
+      if (this.suggestions.length === 0) {
+        this.dropdown.style.display = 'none';
+        this.container.classList.remove('has-suggestions');
+        return;
       }
-    } catch (e) {
-      // Silently ignore
+
+      this.dropdown.innerHTML = this.suggestions.map((s, i) => {
+        return `<div class="suggest-item${i === this.activeIndex ? ' active' : ''}" data-index="${i}">
+          <svg class="suggest-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+          <span class="suggest-text">${this.highlightMatch(s, this.currentQuery)}</span>
+          </div>`;
+      }).join('');
+
+      this.dropdown.style.display = 'block';
+      this.container.classList.add('has-suggestions');
+
+      this.dropdown.querySelectorAll('.suggest-item').forEach((item) => {
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          const idx = parseInt(item.getAttribute('data-index') || '0');
+          this.input!.value = this.suggestions[idx];
+          this.hideDropdown();
+          this.form!.submit();
+        });
+      });
+    }
+
+    private hideDropdown() {
+      if (this.dropdown && this.container) {
+        this.dropdown.style.display = 'none';
+        this.container.classList.remove('has-suggestions');
+      }
+      this.suggestions = [];
+      this.activeIndex = -1;
+    }
+
+    private async fetchSuggestions(query: string) {
+      if (query.length < 1) {
+        this.hideDropdown();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/suggest?q=' + encodeURIComponent(query));
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data) && data.length >= 2) {
+          this.currentQuery = query;
+          this.suggestions = data[1] || [];
+          this.activeIndex = -1;
+          this.renderDropdown();
+        }
+      } catch (e) {
+        // Silently ignore
+      }
     }
   }
 
-  input.addEventListener('input', function() {
-    clearTimeout(debounceTimer);
-    var q = input.value.trim();
-    if (q.length < 1) {
-      hideDropdown();
-      return;
-    }
-    debounceTimer = setTimeout(function() {
-      fetchSuggestions(q);
-    }, 250);
-  });
-
-  input.addEventListener('keydown', function(e) {
-    if (suggestions.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      activeIndex = (activeIndex + 1) % suggestions.length;
-      renderDropdown();
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      activeIndex = activeIndex <= 0 ? suggestions.length - 1 : activeIndex - 1;
-      renderDropdown();
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault();
-      input.value = suggestions[activeIndex];
-      hideDropdown();
-      form.submit();
-    } else if (e.key === 'Escape') {
-      hideDropdown();
-    }
-  });
-
-  input.addEventListener('blur', function() {
-    // Delay to allow click on suggestion
-    setTimeout(hideDropdown, 200);
-  });
-
-  input.addEventListener('focus', function() {
-    if (input.value.trim().length >= 1 && suggestions.length > 0) {
-      renderDropdown();
-    }
-  });
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initSearchBar);
-} else {
-  initSearchBar();
-}
-document.addEventListener('astro:page-load', initSearchBar);
+  customElements.define('search-bar', SearchBar);
 </script>
