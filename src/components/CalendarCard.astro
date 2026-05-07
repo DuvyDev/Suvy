@@ -137,12 +137,15 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
           {dayNames.map(d => <th class="cal-day-header">{d}</th>)}
         </tr>
       </thead>
-      <tbody>
+      <tbody id="cal-tbody">
         {cal.weeks.map(week => (
           <tr>
             {week.map(d => d !== null ? (
-              <td class:list={['cal-day', d === cal.today ? 'cal-today' : '']}>
-                <span>{d}</span>
+              <td class:list={['cal-day', d === cal.today ? 'cal-today' : '']} data-day={d}>
+                <div class="cal-day-box">
+                  <span class="cal-day-number">{d}</span>
+                  <div class="cal-note-indicator hidden"></div>
+                </div>
               </td>
             ) : (
               <td class="cal-day cal-empty"></td>
@@ -151,6 +154,18 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
         ))}
       </tbody>
     </table>
+
+    <!-- Note Editor Panel -->
+    <div class="cal-note-editor hidden">
+      <div class="cal-note-header">
+        <span class="cal-selected-date"></span>
+        <button class="cal-close-note">×</button>
+      </div>
+      <textarea class="cal-note-input" placeholder={lang === 'es' ? 'Añadir nota o evento...' : 'Add note or event...'}></textarea>
+      <div class="cal-note-footer">
+        <button class="cal-save-note">{lang === 'es' ? 'Guardar' : 'Save'}</button>
+      </div>
+    </div>
   </div>
 </calendar-card>
 
@@ -167,6 +182,7 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     position: relative;
     display: flex;
     gap: 1.5rem;
+    min-height: 380px;
   }
   calendar-card.calendar-card::before {
     content: '';
@@ -268,6 +284,7 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
   }
   .calendar-card .cal-right {
     flex: 1;
+    position: relative;
   }
   .calendar-card .cal-table {
     width: 100%;
@@ -286,8 +303,9 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     text-align: center;
     padding: 0;
   }
-  .calendar-card .cal-day span {
+  .calendar-card .cal-day-box {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -298,26 +316,83 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     font-size: 0.95rem;
     font-weight: 500;
     color: var(--text-color);
-    cursor: default;
+    cursor: pointer;
     transition: all 0.15s;
+    position: relative;
   }
-  .calendar-card .cal-day:not(.cal-empty):hover span {
+  .calendar-card .cal-day:not(.cal-empty):hover .cal-day-box {
     background: var(--button-hover);
     border-color: var(--button-border);
   }
-  .calendar-card .cal-empty span {
+  .calendar-card .cal-empty .cal-day-box {
     background: transparent;
     border-color: transparent;
+    cursor: default;
   }
-  .calendar-card .cal-today span {
+  .calendar-card .cal-today .cal-day-box {
     background: var(--link-color);
     color: white;
     font-weight: 700;
-    border-color: var(--link-color);
   }
-  .calendar-card .cal-today:hover span {
+  .calendar-card .cal-note-indicator {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
     background: var(--link-color);
-    filter: brightness(1.1);
+    position: absolute;
+    bottom: 4px;
+  }
+  .calendar-card .cal-today .cal-note-indicator {
+    background: white;
+  }
+  
+  /* Note Editor */
+  .cal-note-editor {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+    left: 170px;
+    background: var(--card-bg);
+    border: 1px solid var(--button-border);
+    border-radius: 1rem;
+    z-index: 10;
+    display: none;
+    flex-direction: column;
+    padding: 1rem;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.1);
+    animation: slideIn 0.2s ease-out;
+  }
+  .cal-note-editor.active {
+    display: flex;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+  
+  .cal-note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+  .cal-selected-date { font-weight: 700; font-size: 0.9rem; color: var(--text-color); text-transform: capitalize; }
+  .cal-close-note { background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; line-height: 1; }
+  .cal-note-input {
+    flex: 1;
+    background: var(--bg-color);
+    border: 1px solid var(--button-border);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    color: var(--text-color);
+    font-size: 0.85rem;
+    resize: none;
+    outline: none;
+  }
+  .cal-note-input:focus { border-color: var(--link-color); }
+  .cal-note-footer { margin-top: 0.75rem; display: flex; justify-content: flex-end; }
+  .cal-save-note {
+    background: var(--link-color);
+    color: white;
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
   }
   
   @media (max-width: 640px) {
@@ -346,9 +421,7 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
       height: 1.6rem;
       font-size: 0.8rem;
     }
-    .calendar-card .cal-day span {
-      font-size: 0.8rem;
-    }
+    .calendar-card .cal-day-box { font-size: 0.8rem; }
     .calendar-card .cal-day-header {
       font-size: 0.65rem;
       padding: 0.2rem 0 0.5rem 0;
@@ -377,63 +450,47 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
     .calendar-card .cal-actions {
       margin-top: auto;
     }
+    .cal-note-editor { left: 1rem; top: 3.5rem; }
   }
 </style>
 
 <script>
-  const MONTHS_EN = ['january','february','march','april','may','june','july','august','september','october','november','december'];
-  const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-
-  function getMonthName(m: number, lang: string) {
-    return new Date(2000, m, 1).toLocaleDateString(lang === 'es' ? 'es-ES' : 'en-US', { month: 'long' });
-  }
-
-  function getDayNames(lang: string) {
-    if (lang === 'es') return ['L','M','X','J','V','S','D'];
-    return ['S','M','T','W','T','F','S'];
-  }
-
-  function buildCalendarHTML(m: number, yr: number) {
-    const firstDay = new Date(yr, m, 1).getDay();
-    const daysInMonth = new Date(yr, m + 1, 0).getDate();
-    const adjustedFirst = firstDay === 0 ? 7 : firstDay;
-    const weeks: (number | null)[][] = [];
-    let week: (number | null)[] = [];
-    for (let i = 1; i < adjustedFirst; i++) week.push(null);
-    for (let d = 1; d <= daysInMonth; d++) {
-      week.push(d);
-      if (week.length === 7) { weeks.push(week); week = []; }
-    }
-    while (week.length < 7) week.push(null);
-    if (week.some(d => d !== null)) weeks.push(week);
-    return weeks;
-  }
-
   class CalendarCard extends HTMLElement {
     private month: number;
     private year: number;
     private lang: string;
+    private selectedDay: number | null = null;
+    private notes: Record<string, string> = {};
 
     constructor() {
       super();
       this.lang = this.dataset.lang === 'es' ? 'es' : 'en';
       this.month = new Date().getMonth();
       this.year = new Date().getFullYear();
+      this.loadNotes();
     }
 
     connectedCallback() {
       const monthEl = this.querySelector('.cal-sidebar-month');
       const yearEl = this.querySelector('.cal-sidebar-year');
-      
-      if (monthEl && yearEl) {
+      if (monthEl) {
         const mName = monthEl.textContent?.toLowerCase() || '';
-        let mIdx = MONTHS_EN.indexOf(mName);
-        if (mIdx === -1) mIdx = MONTHS_ES.indexOf(mName);
-        if (mIdx !== -1) this.month = mIdx;
+        const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const MONTHS_EN = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+        let idx = MONTHS_EN.indexOf(mName);
+        if (idx === -1) idx = MONTHS_ES.indexOf(mName);
+        if (idx !== -1) this.month = idx;
+      }
+      if (yearEl) {
         const y = parseInt(yearEl.textContent || '', 10);
         if (!isNaN(y)) this.year = y;
       }
 
+      this.setupListeners();
+      this.renderCalendar();
+    }
+
+    setupListeners() {
       this.querySelectorAll('.cal-nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const dir = (btn as HTMLElement).dataset.dir;
@@ -441,86 +498,126 @@ const dayNames = lang === 'es' ? dayNamesES : dayNamesEN;
           else if (dir === 'next') { this.month++; if (this.month > 11) { this.month = 0; this.year++; } }
           else if (dir === 'prevYear') { this.year--; }
           else if (dir === 'nextYear') { this.year++; }
+          this.closeEditor();
           this.renderCalendar();
         });
       });
 
-      this.querySelectorAll('.cal-month-select').forEach(sel => {
-        sel.addEventListener('change', (e) => {
-          this.month = parseInt((e.target as HTMLSelectElement).value, 10);
-          this.renderCalendar();
-        });
+      this.querySelector('.cal-month-select')?.addEventListener('change', (e) => {
+        this.month = parseInt((e.target as HTMLSelectElement).value, 10);
+        this.closeEditor();
+        this.renderCalendar();
       });
 
-      this.querySelectorAll('.cal-year-select').forEach(sel => {
-        sel.addEventListener('change', (e) => {
-          this.year = parseInt((e.target as HTMLSelectElement).value, 10);
-          this.renderCalendar();
-        });
+      this.querySelector('.cal-year-select')?.addEventListener('change', (e) => {
+        this.year = parseInt((e.target as HTMLSelectElement).value, 10);
+        this.closeEditor();
+        this.renderCalendar();
       });
+
+      this.querySelector('.cal-close-note')?.addEventListener('click', () => this.closeEditor());
+      this.querySelector('.cal-save-note')?.addEventListener('click', () => this.saveNote());
+    }
+
+    loadNotes() {
+      const stored = localStorage.getItem('suvy_calendar_notes');
+      if (stored) {
+        try { this.notes = JSON.parse(stored); } catch (e) { this.notes = {}; }
+      }
+    }
+
+    saveNote() {
+      if (this.selectedDay === null) return;
+      const input = this.querySelector('.cal-note-input') as HTMLTextAreaElement;
+      const dateKey = `${this.year}-${String(this.month + 1).padStart(2, '0')}-${String(this.selectedDay).padStart(2, '0')}`;
+      
+      const content = input.value.trim();
+      if (content) {
+        this.notes[dateKey] = content;
+      } else {
+        delete this.notes[dateKey];
+      }
+      
+      localStorage.setItem('suvy_calendar_notes', JSON.stringify(this.notes));
+      this.closeEditor();
+      this.renderCalendar();
+    }
+
+    openEditor(day: number) {
+      this.selectedDay = day;
+      const editor = this.querySelector('.cal-note-editor');
+      const dateLabel = this.querySelector('.cal-selected-date');
+      const input = this.querySelector('.cal-note-input') as HTMLTextAreaElement;
+      
+      if (editor && dateLabel && input) {
+        const date = new Date(this.year, this.month, day);
+        dateLabel.textContent = date.toLocaleDateString(this.lang === 'es' ? 'es-ES' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+        
+        const dateKey = `${this.year}-${String(this.month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        input.value = this.notes[dateKey] || '';
+        
+        editor.classList.add('active');
+        input.focus();
+      }
+    }
+
+    closeEditor() {
+      this.selectedDay = null;
+      this.querySelector('.cal-note-editor')?.classList.remove('active');
     }
 
     renderCalendar() {
-      const weeks = buildCalendarHTML(this.month, this.year);
-      const dayNames = getDayNames(this.lang);
+      const daysInMonth = new Date(this.year, this.month + 1, 0).getDate();
+      const firstDay = new Date(this.year, this.month, 1).getDay();
+      const adjustedFirst = firstDay === 0 ? 7 : firstDay;
+
       const now = new Date();
-      const today = now.getMonth() === this.month && now.getFullYear() === this.year ? now.getDate() : -1;
+      const isCurrentMonth = now.getMonth() === this.month && now.getFullYear() === this.year;
+      const today = isCurrentMonth ? now.getDate() : -1;
 
       const monthEl = this.querySelector('.cal-sidebar-month');
       const yearEl = this.querySelector('.cal-sidebar-year');
-      if (monthEl) monthEl.textContent = getMonthName(this.month, this.lang);
+      if (monthEl) monthEl.textContent = new Date(this.year, this.month, 1).toLocaleDateString(this.lang === 'es' ? 'es-ES' : 'en-US', { month: 'long' });
       if (yearEl) yearEl.textContent = this.year.toString();
 
-      const monthSelect = this.querySelector('.cal-month-select') as HTMLSelectElement;
-      if (monthSelect) monthSelect.value = this.month.toString();
+      const tbody = this.querySelector('#cal-tbody');
+      if (!tbody) return;
 
-      const yearSelect = this.querySelector('.cal-year-select') as HTMLSelectElement;
-      if (yearSelect) {
-        yearSelect.innerHTML = '';
-        for (let i = this.year - 10; i <= this.year + 10; i++) {
-          const opt = document.createElement('option');
-          opt.value = i.toString();
-          opt.textContent = i.toString();
-          if (i === this.year) opt.selected = true;
-          yearSelect.appendChild(opt);
+      tbody.innerHTML = '';
+      let day = 1;
+      for (let i = 0; i < 6; i++) {
+        const tr = document.createElement('tr');
+        for (let j = 1; j <= 7; j++) {
+          const td = document.createElement('td');
+          td.className = 'cal-day';
+          
+          const idx = i * 7 + j;
+          if (idx < adjustedFirst || day > daysInMonth) {
+            td.classList.add('cal-empty');
+          } else {
+            const currentDay = day;
+            const dateKey = `${this.year}-${String(this.month + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+            const hasNote = !!this.notes[dateKey];
+            
+            td.dataset.day = currentDay.toString();
+            if (currentDay === today) td.classList.add('cal-today');
+            
+            td.innerHTML = `
+              <div class="cal-day-box">
+                <span class="cal-day-number">${currentDay}</span>
+                <div class="cal-note-indicator ${hasNote ? '' : 'hidden'}"></div>
+              </div>
+            `;
+            
+            td.addEventListener('click', () => this.openEditor(currentDay));
+            day++;
+          }
+          tr.appendChild(td);
         }
-        yearSelect.value = this.year.toString();
-      }
-
-      const thead = this.querySelector('thead tr');
-      if (thead) {
-        thead.innerHTML = '';
-        dayNames.forEach(d => {
-          const th = document.createElement('th');
-          th.className = 'cal-day-header';
-          th.textContent = d;
-          thead.appendChild(th);
-        });
-      }
-
-      const tbody = this.querySelector('tbody');
-      if (tbody) {
-        tbody.innerHTML = '';
-        weeks.forEach(week => {
-          const tr = document.createElement('tr');
-          week.forEach(d => {
-            const td = document.createElement('td');
-            td.className = 'cal-day';
-            if (d === null) {
-              td.classList.add('cal-empty');
-            } else {
-              const span = document.createElement('span');
-              span.textContent = d.toString();
-              td.appendChild(span);
-              if (d === today) td.classList.add('cal-today');
-            }
-            tr.appendChild(td);
-          });
-          tbody.appendChild(tr);
-        });
+        tbody.appendChild(tr);
+        if (day > daysInMonth) break;
       }
     }
   }
-
   customElements.define('calendar-card', CalendarCard);
 </script>
