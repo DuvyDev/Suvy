@@ -7,8 +7,8 @@ import { logger } from './logger';
  */
 const CRAWLER_API = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
 
-/** Timeout for crawler API requests (ms). Keep short so DDG fallback kicks in fast. */
-const CRAWLER_TIMEOUT_MS = 3000;
+/** Timeout for crawler API requests (ms). Complex queries need more time for FTS fallback pipeline. */
+const CRAWLER_TIMEOUT_MS = 5000;
 
 /** Raw search result from the Duvycrawl API. */
 interface CrawlerSearchResult {
