@@ -28,7 +28,8 @@ import { detectUserAgentQuery } from '../lib/useragent';
 const url = new URL(Astro.request.url);
 const q = url.searchParams.get('q') || '';
 const pageParam = url.searchParams.get('page') || '1';
-const langFilter = url.searchParams.get('lang') || '';
+const searchLangCookie = Astro.cookies.get('search_lang')?.value;
+const langFilter = url.searchParams.get('lang') || searchLangCookie || '';
 const afterParam = url.searchParams.get('after') || '';
 const beforeParam = url.searchParams.get('before') || '';
 const regionParam = url.searchParams.get('region') || '';
@@ -306,6 +307,18 @@ const toolsEnabled = Object.fromEntries(toolKeysArr.map(k => [k, enabledToolsSet
   
   <SettingsPanel />
 </Layout>
+
+<script>
+  // Auto-detect browser language for first-time visitors.
+  // Only sets the cookie if neither the URL param nor cookie exist yet.
+  if (!new URLSearchParams(location.search).has('lang') && !document.cookie.split(';').some(c => c.trim().startsWith('search_lang='))) {
+    const navLang = navigator.language || '';
+    const primaryLang = navLang.split('-')[0].toLowerCase();
+    if (primaryLang === 'es' || primaryLang === 'en' || primaryLang === 'fr' || primaryLang === 'de' || primaryLang === 'pt' || primaryLang === 'it') {
+      document.cookie = `search_lang=${primaryLang}; path=/; max-age=31536000`;
+    }
+  }
+</script>
 
 <style>
   /* Gear button */

@@ -7,6 +7,8 @@ const langCookie = Astro.cookies.get('lang')?.value;
 const lang = (langCookie === 'es' ? 'es' : 'en');
 const t = getTranslation(lang);
 
+const searchLangCookie = Astro.cookies.get('search_lang')?.value || '';
+
 const aiPref = Astro.cookies.get('aiPref')?.value || 'auto';
 const toolsCookie = Astro.cookies.get('tools')?.value || 'all';
 const toolKeys = ['calculator', 'calendar', 'converter', 'currency', 'weather', 'useragent'];
@@ -44,6 +46,21 @@ const toolsEnabled = Object.fromEntries(toolKeys.map(k => [k, enabledTools.inclu
       <div class="settings-card">
         <span class="settings-label">{lang === 'es' ? 'Español / English' : 'English / Español'}</span>
         <LanguageToggle />
+      </div>
+      <div class="settings-card">
+        <div class="flex flex-col gap-1">
+          <span class="settings-label">{t.settingsSearchLanguage || 'Idioma para búsquedas'}</span>
+          <span class="settings-radio-desc" style="margin-top: 0;">{t.settingsSearchLanguageDesc || 'Idioma preferido para filtrar resultados'}</span>
+        </div>
+        <select id="search-lang-select" class="settings-select">
+          <option value="" selected={searchLangCookie === ''}>{t.anyLanguage || 'Cualquier idioma'}</option>
+          <option value="es" selected={searchLangCookie === 'es'}>{t.spanish || 'Español'}</option>
+          <option value="en" selected={searchLangCookie === 'en'}>{t.english || 'Inglés'}</option>
+          <option value="fr" selected={searchLangCookie === 'fr'}>{t.french || 'Francés'}</option>
+          <option value="de" selected={searchLangCookie === 'de'}>{t.german || 'Alemán'}</option>
+          <option value="pt" selected={searchLangCookie === 'pt'}>{t.portuguese || 'Portugués'}</option>
+          <option value="it" selected={searchLangCookie === 'it'}>{t.italian || 'Italiano'}</option>
+        </select>
       </div>
     </section>
 
@@ -187,6 +204,14 @@ const toolsEnabled = Object.fromEntries(toolKeys.map(k => [k, enabledTools.inclu
         window.location.reload();
       });
     });
+
+    // Search language preference
+    const searchLangSelect = document.getElementById('search-lang-select') as HTMLSelectElement;
+    if (searchLangSelect) {
+      searchLangSelect.addEventListener('change', () => {
+        document.cookie = `search_lang=${searchLangSelect.value}; path=/; max-age=31536000`;
+      });
+    }
   });
 </script>
 
@@ -298,7 +323,7 @@ const toolsEnabled = Object.fromEntries(toolKeys.map(k => [k, enabledTools.inclu
     background-color: #fff;
   }
   
-  /* Make scrollbar look nice inside panel */
+   /* Make scrollbar look nice inside panel */
   #settings-panel::-webkit-scrollbar {
     width: 6px;
   }
@@ -308,5 +333,25 @@ const toolsEnabled = Object.fromEntries(toolKeys.map(k => [k, enabledTools.inclu
   #settings-panel::-webkit-scrollbar-thumb {
     background-color: var(--button-border);
     border-radius: 10px;
+  }
+
+  .settings-select {
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-color);
+    background: var(--button-bg);
+    border: 1px solid var(--button-border);
+    cursor: pointer;
+    transition: all 0.15s;
+    outline: none;
+  }
+  .settings-select:hover {
+    border-color: var(--link-color);
+  }
+  .settings-select:focus {
+    border-color: var(--link-color);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--link-color) 25%, transparent);
   }
 </style>

@@ -46,11 +46,12 @@ function truncMin(iso?: string): string {
     <div class="tools-divider"></div>
     <div class="tools-section">
       <span class="tools-label">{t.language}</span>
-      <div class="tools-options">
+      <div class="tools-options" id="lang-options">
         {languages.map((l) => (
           <a
             href={l.code ? buildUrl('/search', { lang: l.code, page: '1' }) : buildUrl('/search', { lang: null, page: '1' })}
             class:list={['tools-chip', { active: langFilter === (l.code || '') }]}
+            data-lang={l.code || ''}
           >
             {l.label}
           </a>
@@ -183,6 +184,15 @@ function truncMin(iso?: string): string {
           toggle.classList.remove('open');
           dropdown.classList.remove('open');
         }
+      });
+
+      // Persist search language in cookie when user selects one.
+      const langChips = this.querySelectorAll('[data-lang]');
+      langChips.forEach((chip) => {
+        chip.addEventListener('click', (e) => {
+          const langVal = (chip as HTMLElement).dataset.lang || '';
+          document.cookie = `search_lang=${langVal}; path=/; max-age=31536000`;
+        });
       });
     }
   }
