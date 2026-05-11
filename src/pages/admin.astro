@@ -11,13 +11,13 @@ let isAuthenticated = false;
 
 if (Astro.url.searchParams.get('logout') === 'true') {
   Astro.cookies.delete('admin_token', { path: '/' });
-  isAuthenticated = false;
+  return Astro.redirect('/admin');
 } else if (Astro.request.method === 'POST') {
   const data = await Astro.request.formData();
   const token = data.get('token');
   if (token === expectedToken) {
-    Astro.cookies.set('admin_token', expectedToken, { path: '/' });
-    isAuthenticated = true;
+    Astro.cookies.set('admin_token', expectedToken, { path: '/', httpOnly: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * 7 });
+    return Astro.redirect('/admin');
   }
 } else {
   const cookieToken = Astro.cookies.get('admin_token')?.value;
@@ -74,7 +74,7 @@ if (isAuthenticated) {
       {!isAuthenticated ? (
         <!-- Login Form -->
         <main class="flex flex-col items-center justify-center mt-20">
-          <form method="POST" class="bg-[var(--card-bg)] p-8 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)] w-full max-w-md space-y-6">
+          <form method="POST" data-astro-reload class="bg-[var(--card-bg)] p-8 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)] w-full max-w-md space-y-6">
             <h2 class="text-xl font-semibold text-center">Authentication Required</h2>
             <p class="text-sm text-[var(--text-muted)] text-center">Please enter the admin token to access the dashboard.</p>
             
