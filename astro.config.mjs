@@ -13,6 +13,9 @@ export default defineConfig({
     prefetchAll: true,
     defaultStrategy: 'hover'
   },
+  security: {
+    checkOrigin: false
+  },
   server: {
     port,
     host: process.env.HOST || true, // default: 0.0.0.0 for containers / tunnels
