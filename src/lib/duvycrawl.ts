@@ -2,10 +2,11 @@ import type { SearchResultItem } from './duckduckgo';
 import { logger } from './logger';
 
 /**
- * Base URL for the Duvycrawl API.
- * Configurable via the CRAWLER_API environment variable.
+ * Base URLs for the Duvycrawl APIs.
+ * Since the monolith was split, Search and Crawler run on different ports.
  */
-const CRAWLER_API = process.env.CRAWLER_API || 'http://localhost:8080/api/v1';
+const SEARCH_API = import.meta.env.SEARCH_API || process.env.SEARCH_API || 'http://localhost:8080/api/v1';
+const CRAWLER_API = import.meta.env.CRAWLER_API || process.env.CRAWLER_API || 'http://localhost:8081/api/v1';
 
 /** Timeout for crawler API requests (ms). Complex queries need more time for FTS fallback pipeline. */
 const CRAWLER_TIMEOUT_MS = 5000;
@@ -102,7 +103,7 @@ export async function searchCrawler(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CRAWLER_TIMEOUT_MS);
 
-    const url = `${CRAWLER_API}/search?q=${encodeURIComponent(query)}&limit=${limit}&lang=es`;
+    const url = `${SEARCH_API}/search?q=${encodeURIComponent(query)}&limit=${limit}&lang=es`;
     const response = await fetch(url, { signal: controller.signal });
 
     clearTimeout(timeoutId);
@@ -176,7 +177,7 @@ function buildSearchUrl(
   if (filters.before) params.set('before', filters.before);
   if (filters.region) params.set('region', filters.region);
 
-  return `${CRAWLER_API}/search?${params.toString()}`;
+  return `${SEARCH_API}/search?${params.toString()}`;
 }
 
 /**
@@ -262,7 +263,7 @@ export async function searchCrawlerImages(
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CRAWLER_TIMEOUT_MS);
 
-    const url = `${CRAWLER_API}/images/search?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}`;
+    const url = `${SEARCH_API}/images/search?q=${encodeURIComponent(query)}&limit=${limit}&page=${page}`;
     const response = await fetch(url, { signal: controller.signal });
 
     clearTimeout(timeoutId);

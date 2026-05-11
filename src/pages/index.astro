@@ -3,7 +3,6 @@ import Layout from '../layouts/Layout.astro';
 import SearchBar from '../components/SearchBar.astro';
 import ThemeToggle from '../components/ThemeToggle.astro';
 import LanguageToggle from '../components/LanguageToggle.astro';
-import CrawlBox from '../components/CrawlBox.astro';
 import SettingsPanel from '../components/SettingsPanel.astro';
 import { getTranslation } from '../i18n/translations';
 
@@ -47,12 +46,6 @@ const metaDesc = langCookie === 'es'
     </div>
 
     <!-- Removed Language Info -->
-
-    <!-- Manual URL Submission -->
-    <div class="animate-fade-in-up flex w-full justify-center" style="animation-delay: 0.4s;">
-      <CrawlBox lang={langCookie || 'es'} />
-    </div>
-
   </main>
 
   <footer class="bg-[var(--footer-bg)] text-[var(--footer-text)] backdrop-blur-md border-t border-[var(--button-border)] flex flex-col transition-colors duration-300">
