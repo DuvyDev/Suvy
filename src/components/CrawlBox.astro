@@ -9,7 +9,7 @@ const { lang } = Astro.props;
 const t = getTranslation(lang);
 ---
 
-<crawl-box class="mt-10 w-full max-w-[650px]">
+<crawl-box class="w-full">
   <div class="crawl-box-inner p-6 rounded-2xl border border-[var(--search-border)] backdrop-blur-sm">
     <h2 class="text-base font-semibold text-[var(--text-color)] mb-2 flex items-center gap-2">
       <svg class="w-5 h-5 text-[var(--link-color)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -18,16 +18,16 @@ const t = getTranslation(lang);
       {t.addUrlTitle}
     </h2>
     <p class="text-sm text-[var(--text-muted)] mb-4">{t.addUrlDesc}</p>
-    <div class="flex gap-3">
+    <div class="flex gap-3 min-w-0">
       <input 
         type="url" 
         id="crawl-url"
         placeholder="https://example.com"
-        class="flex-1 bg-[var(--button-bg)] border border-[var(--button-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-color)] outline-none focus:border-[var(--link-color)] transition-colors"
+        class="min-w-0 flex-1 bg-[var(--button-bg)] border border-[var(--button-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--text-color)] outline-none focus:border-[var(--link-color)] transition-colors"
         data-msg-empty={t.enterValidUrl}
         data-msg-protocol={t.urlMustStartWith}
       />
-      <button id="crawl-btn" class="bg-[var(--button-bg)] hover:bg-[var(--button-hover)] border border-[var(--button-border)] text-[var(--button-text)] px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-300 cursor-pointer flex items-center gap-2 whitespace-nowrap"
+      <button id="crawl-btn" class="bg-[var(--button-bg)] hover:bg-[var(--button-hover)] border border-[var(--button-border)] text-[var(--button-text)] px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-300 cursor-pointer flex items-center gap-1.5 whitespace-nowrap shrink-0"
         data-msg-sending={t.sending}
         data-msg-success={t.urlQueued}
         data-msg-success-skip={t.urlQueuedWithSkip}

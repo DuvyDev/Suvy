@@ -28,20 +28,26 @@ if (Astro.url.searchParams.get('logout') === 'true') {
 let stats: any = null;
 let queue: any = null;
 let status: any = null;
+let seeds: any = null;
+let interests: any = null;
 
 if (isAuthenticated) {
   // Use import.meta.env first (Astro .env support), fallback to process.env, then default to 8081
   const CRAWLER_API = import.meta.env.CRAWLER_API || process.env.CRAWLER_API || 'http://localhost:8081/api/v1';
   try {
-    const [statsRes, queueRes, statusRes] = await Promise.all([
+    const [statsRes, queueRes, statusRes, seedsRes, interestsRes] = await Promise.all([
       fetch(`${CRAWLER_API}/stats`),
       fetch(`${CRAWLER_API}/queue`),
-      fetch(`${CRAWLER_API}/crawler/status`)
+      fetch(`${CRAWLER_API}/crawler/status`),
+      fetch(`${CRAWLER_API}/seeds`),
+      fetch(`${CRAWLER_API}/interests`),
     ]);
     
     if (statsRes.ok) stats = (await statsRes.json()).data;
     if (queueRes.ok) queue = await queueRes.json();
     if (statusRes.ok) status = await statusRes.json();
+    if (seedsRes.ok) seeds = (await seedsRes.json()).data;
+    if (interestsRes.ok) interests = (await interestsRes.json()).data;
   } catch (e) {
     console.error('Failed to fetch admin data', e);
   }
@@ -128,7 +134,7 @@ if (isAuthenticated) {
           <section class="lg:col-span-2 space-y-8">
             
             <!-- Index Stats -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <div class="bg-[var(--card-bg)] p-5 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)]">
                 <p class="text-sm text-[var(--text-muted)] mb-1">Total Indexed</p>
                 <p class="text-2xl font-bold">{stats?.stats?.total_pages?.toLocaleString() || 0}</p>
@@ -138,9 +144,13 @@ if (isAuthenticated) {
                 <p class="text-2xl font-bold">{stats?.stats?.total_domains?.toLocaleString() || 0}</p>
               </div>
               <div class="bg-[var(--card-bg)] p-5 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)]">
+                <p class="text-sm text-[var(--text-muted)] mb-1">Seed Domains</p>
+                <p class="text-2xl font-bold">{stats?.stats?.seed_domains?.toLocaleString() || 0}</p>
+              </div>
+              <div class="bg-[var(--card-bg)] p-5 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)]">
                 <p class="text-sm text-[var(--text-muted)] mb-1">Index Size</p>
                 <p class="text-2xl font-bold">
-                  {stats?.stats?.db_size_bytes ? (stats.stats.db_size_bytes / 1024 / 1024).toFixed(1) + ' MB' : '0 MB'}
+                  {stats?.stats?.database_size_mb ? stats.stats.database_size_mb.toFixed(1) + ' MB' : '0 MB'}
                 </p>
               </div>
               <div class="bg-[var(--card-bg)] p-5 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)]">
@@ -152,10 +162,14 @@ if (isAuthenticated) {
             <!-- Queue Stats -->
             <div class="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)]">
               <h2 class="text-lg font-semibold mb-4">Frontier Queue</h2>
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-6">
                 <div>
                   <p class="text-sm text-[var(--text-muted)] mb-1">Pending URLs</p>
                   <p class="text-xl font-medium">{queue?.pending?.toLocaleString() || 0}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-[var(--text-muted)] mb-1">Active Domains</p>
+                  <p class="text-xl font-medium">{queue?.domains?.toLocaleString() || 0}</p>
                 </div>
                 <div>
                   <p class="text-sm text-[var(--text-muted)] mb-1">Total Enqueued</p>
@@ -165,9 +179,67 @@ if (isAuthenticated) {
                   <p class="text-sm text-[var(--text-muted)] mb-1">Total Dequeued</p>
                   <p class="text-xl font-medium">{queue?.total_dequeued?.toLocaleString() || 0}</p>
                 </div>
+                <div>
+                  <p class="text-sm text-[var(--text-muted)] mb-1">Render Backlog</p>
+                  <p class="text-xl font-medium">{queue?.render_backlog?.toLocaleString() || 0}</p>
+                </div>
               </div>
             </div>
-            
+
+            <!-- Seeds -->
+            <div class="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)]">
+              <h2 class="text-lg font-semibold mb-4">
+                Seed URLs
+                {seeds?.length > 0 && <span class="text-sm font-normal text-[var(--text-muted)]">({seeds.length})</span>}
+              </h2>
+              {seeds?.length > 0 ? (
+                <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="text-[var(--text-muted)] border-b border-[var(--button-border)]">
+                        <th class="text-left py-2 pr-4 font-medium">URL</th>
+                        <th class="text-left py-2 pr-4 font-medium">Domain</th>
+                        <th class="text-left py-2 pr-4 font-medium">Recrawl Interval</th>
+                        <th class="text-left py-2 font-medium">Last Enqueued</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {seeds.map((seed: any) => (
+                        <tr class="border-b border-[var(--button-border)] last:border-0">
+                          <td class="py-2 pr-4 truncate max-w-[200px]" title={seed.url}>{seed.url}</td>
+                          <td class="py-2 pr-4">{seed.domain}</td>
+                          <td class="py-2 pr-4">{seed.recrawl_interval_seconds ? (seed.recrawl_interval_seconds / 3600).toFixed(0) + 'h' : '-'}</td>
+                          <td class="py-2">{seed.last_enqueued ? new Date(seed.last_enqueued).toLocaleString() : '-'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p class="text-sm text-[var(--text-muted)]">No seed URLs configured.</p>
+              )}
+            </div>
+
+            <!-- Interests -->
+            <div class="bg-[var(--card-bg)] p-6 rounded-2xl shadow-[var(--search-shadow)] border border-[var(--search-border)]">
+              <h2 class="text-lg font-semibold mb-4">
+                Crawl Interests
+                {interests?.length > 0 && <span class="text-sm font-normal text-[var(--text-muted)]">({interests.length})</span>}
+              </h2>
+              {interests?.length > 0 ? (
+                <div class="flex flex-wrap gap-2">
+                  {interests.map((item: any) => (
+                    <span class="inline-flex items-center gap-1.5 bg-[var(--button-bg)] border border-[var(--button-border)] rounded-full px-3 py-1.5 text-sm">
+                      {item.term}
+                      <span class="text-xs text-[var(--text-muted)]">{(+item.weight).toFixed(1)}</span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p class="text-sm text-[var(--text-muted)]">No interest terms configured.</p>
+              )}
+            </div>
+
           </section>
 
         </main>
