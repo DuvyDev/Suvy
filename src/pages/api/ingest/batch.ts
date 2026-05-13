@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
 
 const CRAWLER_API = import.meta.env.CRAWLER_API || process.env.CRAWLER_API || 'http://localhost:8081/api/v1';
-const CRAWLER_TIMEOUT_MS = 8000;
+const CRAWLER_TIMEOUT_MS = 15000; // 15 seconds timeout for batch ingest
 
+// Handle CORS preflight requests from the extension
 export const OPTIONS: APIRoute = async () => {
   return new Response(null, {
     status: 204,
@@ -17,12 +18,22 @@ export const OPTIONS: APIRoute = async () => {
 
 export const POST: APIRoute = async ({ request }) => {
   try {
-    const body = await request.json();
-    const urls: string[] = body?.urls || [];
-    const force: boolean = body?.force === true;
+    const bodyText = await request.text();
+    let body;
+    try {
+      body = JSON.parse(bodyText);
+    } catch (e) {
+      return new Response(JSON.stringify({ error: 'Invalid JSON payload' }), {
+        status: 400,
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
 
-    if (urls.length === 0) {
-      return new Response(JSON.stringify({ error: 'No URLs provided' }), {
+    if (!body || !Array.isArray(body.pages) || body.pages.length === 0) {
+      return new Response(JSON.stringify({ error: 'No pages provided in payload' }), {
         status: 400,
         headers: { 
           'Content-Type': 'application/json',
@@ -34,20 +45,25 @@ export const POST: APIRoute = async ({ request }) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), CRAWLER_TIMEOUT_MS);
 
-    const res = await fetch(`${CRAWLER_API}/crawl`, {
+    const res = await fetch(`${CRAWLER_API}/ingest/batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ urls, force }),
+      body: JSON.stringify(body),
       signal: controller.signal,
     });
 
     clearTimeout(timeoutId);
 
     if (!res.ok) {
+      let errorDetails = '';
+      try {
+        errorDetails = await res.text();
+      } catch (e) {}
+      
       return new Response(
-        JSON.stringify({ error: `Crawler returned ${res.status}` }),
+        JSON.stringify({ error: `Crawler returned ${res.status}`, details: errorDetails }),
         { 
-          status: 502, 
+          status: res.status >= 500 ? 502 : res.status, 
           headers: { 
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*',
@@ -59,7 +75,7 @@ export const POST: APIRoute = async ({ request }) => {
     const crawlerResponse = await res.json();
 
     return new Response(JSON.stringify({ success: true, ...crawlerResponse }), {
-      status: 200,
+      status: res.status,
       headers: { 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
