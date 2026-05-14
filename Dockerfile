@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && echo 'onlyBuiltDependencies[]=esbuild' > .npmrc && echo 'onlyBuiltDependencies[]=sharp' >> .npmrc && pnpm install --frozen-lockfile && rm .npmrc
+RUN npm i -g pnpm && pnpm install
 
 # Copy source and build
 COPY . .
