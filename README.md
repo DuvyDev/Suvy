@@ -110,14 +110,14 @@ Run Suvy by itself if you already have a DuvyCrawl instance elsewhere.
 ```bash
 git clone https://github.com/DuvyDev/Suvy.git
 cd Suvy
-npm install
+pnpm install
 
 # Development
-npm run dev
+pnpm run dev
 
 # Production build
-npm run build
-npm run preview
+pnpm run build
+pnpm run preview
 ```
 
 The dev server starts on `http://localhost:8800` by default.
