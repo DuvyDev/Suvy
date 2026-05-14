@@ -4,8 +4,8 @@ FROM node:24-alpine AS builder
 WORKDIR /app
 
 # Install dependencies
-COPY package.json pnpm-lock.yaml ./
-RUN npm i -g pnpm && pnpm install
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN npm i -g pnpm && pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
